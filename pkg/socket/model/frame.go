@@ -9,8 +9,11 @@ import (
 type Command int8
 
 const (
-	COMMAND_HEARTBEAT_REQ Command = 13
-	COMMAND_UNKNOWN       Command = 0
+	CommandHeartbeat Command = 13
+	CommandAppPush           = 21  // APP推送
+	CommandRequest           = 100 // 请求
+	CommandReply             = 101 // 响应
+	CommandEvent             = 102 // 发送事件
 )
 
 type Frame interface {
@@ -34,7 +37,7 @@ type HeartbeatFrame struct {
 }
 
 var Heartbeat = HeartbeatFrame{
-	Cmd: COMMAND_HEARTBEAT_REQ,
+	Cmd: CommandHeartbeat,
 }
 
 func (packet *HeartbeatFrame) ToBuffer() (*bytes.Buffer, error) {

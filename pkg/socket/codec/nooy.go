@@ -26,7 +26,7 @@ type NooyCodec struct {
 func deserializeFrame(cmd model.Command, buffer bytes.Buffer) (model.Frame, error) {
 	switch cmd {
 	// 收到心跳结果
-	case model.COMMAND_HEARTBEAT_REQ:
+	case model.CommandHeartbeat:
 		return model.Heartbeat, nil
 	default:
 		frame := model.PacketFrame{

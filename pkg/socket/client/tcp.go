@@ -14,11 +14,18 @@ import (
 var NooyCodec = codec.NooyCodec{}
 
 type CommonHeader struct {
-	Path string `json:"path"`
+	GlobalSeq string `json:"globalSeq" mapstructure:"globalSeq"`
+	SubSeq    string `json:"subSeq" mapstructure:"subSeq"`
 }
+
+type RequestHeader struct {
+	Path string `json:"path"`
+	CommonHeader
+}
+
 type RequestDTO struct {
-	Header CommonHeader `json:"header"`
-	Body   interface{}  `json:"body"`
+	Header RequestHeader `json:"header"`
+	Body   interface{}   `json:"body"`
 }
 type ResponseDTO struct {
 	Header CommonHeader `json:"header"`
@@ -62,7 +69,7 @@ func RequestTcp(addr string, path string, content interface{}, timeout int) (int
 		requestDTO := RequestDTO{
 			Body: content,
 		}
-		requestDTO.Header = CommonHeader{
+		requestDTO.Header = RequestHeader{
 			Path: path,
 		}
 		packet := model.PacketFrame{Cmd: 100, Body: requestDTO}

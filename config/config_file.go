@@ -1,13 +1,12 @@
-package load
+package config
 
 import (
-	"github.com/inooy/serco-client/config"
 	"github.com/spf13/viper"
 	"runtime"
 	"strings"
 )
 
-func FromFile(m *config.Manager) {
+func FromFile(m *Manager) {
 	//realPath, _ := filepath.Abs("./")
 	// realPath := getCurrentDir()
 	///configFilePath := realPath + "/" + env + "/"

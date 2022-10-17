@@ -1,27 +1,15 @@
-package load
+package config
 
 import (
 	"bytes"
 	"errors"
-	"github.com/inooy/serco-client/config"
+	"github.com/inooy/serco-client/config/remote"
 	"github.com/inooy/serco-client/pkg/log"
 	"github.com/spf13/viper"
 	"github.com/swxctx/ghttp"
 )
 
-type Metadata struct {
-	Id         int    `json:"id"`
-	AppName    string `json:"appName"`
-	EnvType    string `json:"envType"`
-	FileId     string `json:"fileId"`
-	Format     string `json:"format"`
-	Content    string `json:"content"`
-	CreateTime int64  `json:"createTime"`
-	UpdateTime int64  `json:"updateTime"`
-	Version    int    `json:"version"`
-}
-
-func FromServer(m *config.Manager) {
+func FromHttpServer(m *Manager) {
 	log.Info("从配置中心获取配置信息")
 	list, err := requestServer(m.Options.RemoteAddr, m.Options.Env, m.Options.AppName)
 	if err != nil {
@@ -47,34 +35,18 @@ func FromServer(m *config.Manager) {
 	}
 }
 
-func UpdateConfigBean(metadata Metadata, m *config.Manager) {
-	con := viper.New()
-	con.SetConfigType("yaml")
-	con.SetConfigName("config")
-	log.Info("加载到配置中心配置:", metadata.FileId)
-	log.Info("配置内容：", metadata.Content)
-	err := con.ReadConfig(bytes.NewBufferString(metadata.Content))
-	if err != nil {
-		log.Error("配置更新失败：", err.Error())
-		return
-	}
-	err = con.Unmarshal(m.Bean)
-	if err != nil {
-		log.Error("配置绑定失败：", err.Error())
-	}
-}
-
 type FetchConfigParams struct {
 	AppName string `json:"appName"`
 	EnvType string `json:"envType"`
 }
+
 type ResultRep struct {
-	Code    int32      `json:"code"`
-	Message string     `json:"message"`
-	Data    []Metadata `json:"data"`
+	Code    int32             `json:"code"`
+	Message string            `json:"message"`
+	Data    []remote.Metadata `json:"data"`
 }
 
-func requestServer(confSrv string, env string, appName string) ([]Metadata, error) {
+func requestServer(confSrv string, env string, appName string) ([]remote.Metadata, error) {
 	req := ghttp.Request{
 		Url:         confSrv + "/config/metadata/list",
 		Method:      "GET",

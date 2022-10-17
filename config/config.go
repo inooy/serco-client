@@ -1,10 +1,7 @@
 package config
 
 import (
-	"github.com/inooy/serco-client/config/load"
 	"github.com/inooy/serco-client/config/remote"
-	"github.com/inooy/serco-client/pkg/log"
-	"github.com/inooy/serco-client/pkg/socket/connection"
 	"sync"
 )
 
@@ -21,25 +18,16 @@ type Manager struct {
 	Bean    interface{}
 }
 
+func (m *Manager) OnFileChange(metadata *remote.Metadata) {
+	UpdateConfigBean(metadata, m)
+}
+
 func (m *Manager) InitConfig() {
 	once.Do(func() {
 		if m.Options.RemoteAddr == "" {
-			load.FromFile(m)
+			FromFile(m)
 		} else {
-			load.FromServer(m)
-			conn := remote.NewConfigSocketClient(connection.TcpSocketConnectOpts{
-				Host: m.Options.RemoteAddr,
-			})
-			conn.Mount()
-			err := conn.Connect()
-			if err != nil {
-				panic(err)
-			}
-			result, err := conn.RequestTcp("/app/config", "", 12)
-			if err != nil {
-				panic(err)
-			}
-			log.Info(result)
+			FromServer(m)
 		}
 	})
 }

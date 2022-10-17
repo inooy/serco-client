@@ -27,9 +27,17 @@ type RequestDTO struct {
 	Header RequestHeader `json:"header"`
 	Body   interface{}   `json:"body"`
 }
+
+type Response struct {
+	Code  int         `json:"code"`
+	SeqId string      `json:"seqId"` // sequence number chosen by client
+	Msg   string      `json:"msg"`
+	Data  interface{} `json:"data"`
+}
+
 type ResponseDTO struct {
 	Header CommonHeader `json:"header"`
-	Body   interface{}  `json:"body"`
+	Body   Response     `json:"body"`
 }
 
 func RequestTcp(addr string, path string, content interface{}, timeout int) (interface{}, error) {

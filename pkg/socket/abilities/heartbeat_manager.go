@@ -1,7 +1,6 @@
 package abilities
 
 import (
-	"github.com/inooy/serco-client/pkg/socket/client"
 	"github.com/inooy/serco-client/pkg/socket/model"
 	"github.com/pkg/errors"
 	"strconv"
@@ -39,10 +38,10 @@ type HeartbeatManager struct {
 	isDead           bool
 	timer            *time.Timer
 	options          HeartbeatOpts
-	socketClient     client.SocketClient
+	socketClient     model.SocketClient
 }
 
-func NewHeartbeatManager(socketClient client.SocketClient) *HeartbeatManager {
+func NewHeartbeatManager(socketClient model.SocketClient) *HeartbeatManager {
 	return &HeartbeatManager{
 		socketClient: socketClient,
 		options: HeartbeatOpts{

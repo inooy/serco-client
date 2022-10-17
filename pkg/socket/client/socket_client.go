@@ -12,30 +12,15 @@ import (
 	"time"
 )
 
-type SocketClient interface {
-	Mount()
-	Send(frame model.Frame) error
-	SendHeartbeat() error
-	Close(err error) error
-	Connect() error
-	ReConnect(err error) error
-	IsConnect() bool
-	RequestTcp(path string, content interface{}, timeout int) (interface{}, error)
-}
-
-type Implement interface {
-	GetHeartbeatFrame() model.Frame
-}
-
 type Template struct {
-	Implement
+	model.Implement
 	Emitter          *RpcEventEmitter
 	socketConnection connection.SocketConnection
 	reconnectManager *abilities.ReconnectManager
 	heartbeatManager *abilities.HeartbeatManager
 }
 
-func NewTemplate(impl Implement, socketConnection connection.SocketConnection) *Template {
+func NewTemplate(impl model.Implement, socketConnection connection.SocketConnection) *Template {
 	return &Template{
 		Implement:        impl,
 		socketConnection: socketConnection,
@@ -112,7 +97,9 @@ func (t *Template) Close(err error) error {
 }
 
 func (t *Template) Connect() (err error) {
-	err = t.socketConnection.Connect()
+	if err = t.socketConnection.Connect(); err != nil {
+		return
+	}
 	t.reconnectManager.Start()
 	return
 }

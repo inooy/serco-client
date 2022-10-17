@@ -2,7 +2,7 @@ package abilities
 
 import (
 	"github.com/inooy/serco-client/pkg/log"
-	"github.com/inooy/serco-client/pkg/socket/client"
+	"github.com/inooy/serco-client/pkg/socket/model"
 	"time"
 )
 
@@ -12,7 +12,7 @@ const (
 
 type ReconnectManager struct {
 	timer        *time.Timer
-	socketClient client.SocketClient
+	socketClient model.SocketClient
 	// 是否进行断线重连等管理
 	isConnectionHolden bool
 	// 延时连接时间
@@ -24,7 +24,7 @@ type ReconnectManager struct {
 	running               bool
 }
 
-func NewReconnectManager(socketClient client.SocketClient) *ReconnectManager {
+func NewReconnectManager(socketClient model.SocketClient) *ReconnectManager {
 	return &ReconnectManager{
 		socketClient: socketClient,
 	}
@@ -50,7 +50,11 @@ func (r *ReconnectManager) handleReconnect() {
 	if !r.socketClient.IsConnect() {
 		r.totalReconnectTimes++
 		r.lastTime = time.Now().Nanosecond()
-		r.socketClient.Connect()
+		err := r.socketClient.Connect()
+		if err != nil {
+			log.Error("reconnect fail", err.Error())
+			return
+		}
 	}
 }
 

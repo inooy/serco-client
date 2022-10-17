@@ -24,7 +24,7 @@ func NewTcpConnection(options TcpSocketConnectOpts, codecImpl codec.Codec) Socke
 	return impl
 }
 
-func (conn *TcpConnection) connect() error {
+func (conn *TcpConnection) Connect() error {
 	if conn.GetConnectionState() == CONNECTED {
 		log.Warn("tcp can not connect: a connection is already established.")
 		return nil
@@ -39,7 +39,7 @@ func (conn *TcpConnection) connect() error {
 		conn.SetConnectionStatus(ERROR)
 		return err
 	}
-	conn.setupSocket(socket)
+	conn.Conn = socket
 	conn.SetConnectionStatus(CONNECTED)
 	go conn.setupSocket(socket)
 	return nil

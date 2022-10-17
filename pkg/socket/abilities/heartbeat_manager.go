@@ -90,11 +90,16 @@ func (h *HeartbeatManager) pulseHandler(pulseType HeartbeatType) {
 	if pulseType == SEND {
 		h.loseTimes++
 		if h.options.feedLoseTimes != -1 && h.loseTimes >= h.options.feedLoseTimes {
-			h.socketClient.Close(errors.WithMessage(model.DogDeadErr, strconv.Itoa(h.loseTimes)))
+			_ = h.socketClient.Close(errors.WithMessage(model.DogDeadErr, strconv.Itoa(h.loseTimes)))
 			h.Dead()
 		} else {
 			h.totalPulseTimes++
-			h.socketClient.SendHeartbeat()
+			err := h.socketClient.SendHeartbeat()
+			if err != nil {
+				_ = h.socketClient.Close(errors.WithMessage(model.DogDeadErr, strconv.Itoa(h.loseTimes)))
+				h.Dead()
+				return
+			}
 			h.Pulse()
 		}
 	} else {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/inooy/serco-client/pkg/log"
 	"github.com/inooy/serco-client/pkg/socket/codec"
 	"github.com/inooy/serco-client/pkg/socket/model"
 	"io"
@@ -19,10 +20,14 @@ type SocketConnection interface {
 	implement
 }
 
+// implement
+// socket Connect抽象接口
 type implement interface {
 	Connect() error
 }
 
+// template socket连接模板方法
+// 提供socket connection公共实现，具体实现包括TCP、TLS，需要扩展{implement.Connect}接口
 type template struct {
 	implement
 	Conn      net.Conn
@@ -103,8 +108,12 @@ func (conn *template) Send(frame model.Frame) error {
 	if conn.Conn == nil {
 		return errors.New("SocketConnection: Cannot send frame, not connected")
 	}
-	_buffer := conn.Codec.Encode(frame)
-	_, err := conn.Conn.Write(_buffer.Bytes())
+	_buffer, err := conn.Codec.Encode(frame)
+	if err != nil {
+		conn.handleError(err)
+		return err
+	}
+	_, err = conn.Conn.Write(_buffer.Bytes())
 	if err != nil {
 		conn.handleError(err)
 		return err
@@ -143,6 +152,13 @@ func (conn *template) readFrames(buffer []byte) []model.Frame {
 }
 
 func (conn *template) setupSocket(real net.Conn) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorf("socket 致命错误：%s\n", r)
+			log.Info("recover socket")
+			_ = conn.Close(errors.New(fmt.Sprintf("socket 致命错误：%s\n", r)))
+		}
+	}()
 	buffer := make([]byte, 1024)
 	for {
 		readLen, err := real.Read(buffer)

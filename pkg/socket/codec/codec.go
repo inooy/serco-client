@@ -7,5 +7,5 @@ import (
 
 type Codec interface {
 	Decode(buffer *bytes.Buffer) ([]model.Frame, *bytes.Buffer)
-	Encode(frame model.Frame) *bytes.Buffer
+	Encode(frame model.Frame) (*bytes.Buffer, error)
 }

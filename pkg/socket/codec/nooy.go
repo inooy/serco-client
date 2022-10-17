@@ -79,11 +79,11 @@ func (codec *NooyCodec) Decode(buffer *bytes.Buffer) ([]model.Frame, *bytes.Buff
 	return frames, buffer
 }
 
-func (codec *NooyCodec) Encode(frame model.Frame) *bytes.Buffer {
+func (codec *NooyCodec) Encode(frame model.Frame) (bf *bytes.Buffer, err error) {
 	packet := (frame).(model.PacketFrame)
 	framebuffer, err := packet.ToBuffer()
 	if err != nil {
-		panic(err)
+		return
 	}
 	var frameLength = int32(framebuffer.Len())
 	mask := ProtocolVersion | 0b01111111
@@ -93,26 +93,26 @@ func (codec *NooyCodec) Encode(frame model.Frame) *bytes.Buffer {
 	var cmdByte = int8(0x00 | packet.Cmd)
 
 	// 先组包好，一次性写入IO，一定程度避免半包粘包，网络IO比内存读写更耗时
-	var bf bytes.Buffer
-	err = binary.Write(&bf, binary.BigEndian, ProtocolVersion)
+	//var bf bytes.Buffer
+	err = binary.Write(bf, binary.BigEndian, ProtocolVersion)
 	if err != nil {
-		panic(err)
+		return
 	}
-	err = binary.Write(&bf, binary.BigEndian, mask)
+	err = binary.Write(bf, binary.BigEndian, mask)
 	if err != nil {
-		panic(err)
+		return
 	}
-	err = binary.Write(&bf, binary.BigEndian, cmdByte)
+	err = binary.Write(bf, binary.BigEndian, cmdByte)
 	if err != nil {
-		panic(err)
+		return
 	}
-	err = binary.Write(&bf, binary.BigEndian, frameLength)
+	err = binary.Write(bf, binary.BigEndian, frameLength)
 	if err != nil {
-		panic(err)
+		return
 	}
-	err = binary.Write(&bf, binary.BigEndian, framebuffer.Bytes())
+	err = binary.Write(bf, binary.BigEndian, framebuffer.Bytes())
 	if err != nil {
-		panic(err)
+		return
 	}
-	return &bf
+	return bf, err
 }

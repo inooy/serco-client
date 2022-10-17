@@ -87,7 +87,7 @@ func (codec *SercoCodec) Decode(buffer *bytes.Buffer) ([]model.Frame, *bytes.Buf
 	return frames, buffer
 }
 
-func (codec *SercoCodec) Encode(frame model.Frame) *bytes.Buffer {
+func (codec *SercoCodec) Encode(frame model.Frame) (bf *bytes.Buffer, err error) {
 	var cmd model.Command
 	var framebuffer *bytes.Buffer
 
@@ -96,7 +96,7 @@ func (codec *SercoCodec) Encode(frame model.Frame) *bytes.Buffer {
 		cmd = model.Heartbeat.Cmd
 		buf, err := model.Heartbeat.ToBuffer()
 		if err != nil {
-			panic(err)
+			return
 		}
 		framebuffer = buf
 	case model.PacketFrame:
@@ -104,7 +104,7 @@ func (codec *SercoCodec) Encode(frame model.Frame) *bytes.Buffer {
 		cmd = packet.Cmd
 		buf, err := packet.ToBuffer()
 		if err != nil {
-			panic(err)
+			return
 		}
 		framebuffer = buf
 	}
@@ -117,26 +117,25 @@ func (codec *SercoCodec) Encode(frame model.Frame) *bytes.Buffer {
 	var cmdByte = int8(0x00 | cmd)
 
 	// 先组包好，一次性写入IO，一定程度避免半包粘包，网络IO比内存读写更耗时
-	var bf bytes.Buffer
-	err := binary.Write(&bf, binary.BigEndian, Magic)
+	err = binary.Write(bf, binary.BigEndian, Magic)
 	if err != nil {
-		panic(err)
+		return
 	}
-	err = binary.Write(&bf, binary.BigEndian, ProtocolVersion)
+	err = binary.Write(bf, binary.BigEndian, ProtocolVersion)
 	if err != nil {
-		panic(err)
+		return
 	}
-	err = binary.Write(&bf, binary.BigEndian, cmdByte)
+	err = binary.Write(bf, binary.BigEndian, cmdByte)
 	if err != nil {
-		panic(err)
+		return
 	}
-	err = binary.Write(&bf, binary.BigEndian, frameLength+HeadMetadataLen)
+	err = binary.Write(bf, binary.BigEndian, frameLength+HeadMetadataLen)
 	if err != nil {
-		panic(err)
+		return
 	}
-	err = binary.Write(&bf, binary.BigEndian, framebuffer.Bytes())
+	err = binary.Write(bf, binary.BigEndian, framebuffer.Bytes())
 	if err != nil {
-		panic(err)
+		return
 	}
-	return &bf
+	return bf, nil
 }

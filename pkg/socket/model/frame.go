@@ -9,9 +9,9 @@ import (
 type Command int8
 
 const (
-	CommandLogin         Command = 3 // 登录请求
-	CommandLoginResponse Command = 4 // 登录响应
-	CommandHeartbeat     Command = 13
+	CommandHeartbeat     Command = 2
+	CommandLogin         Command = 3   // 登录请求
+	CommandLoginResponse Command = 4   // 登录响应
 	CommandAppPush       Command = 21  // APP推送
 	CommandRequest       Command = 100 // 请求
 	CommandReply         Command = 101 // 响应
@@ -45,7 +45,7 @@ var Heartbeat = HeartbeatFrame{
 }
 
 func (packet *HeartbeatFrame) ToBuffer() (*bytes.Buffer, error) {
-	data := int32(-128)
+	data := int8(-128)
 	buffer := bytes.NewBuffer([]byte{})
 	err := binary.Write(buffer, binary.BigEndian, data)
 	if err != nil {

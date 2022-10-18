@@ -14,15 +14,16 @@ func main() {
 	conf := CustomConfig{}
 	configManager := config.Manager{
 		Options: config.Options{
-			AppName:    "serco-demo",
-			Env:        "dev",
-			RemoteAddr: "127.0.0.1:9011",
+			AppName:      "serco-demo",
+			Env:          "dev",
+			RemoteAddr:   "127.0.0.1:9011",
+			PollInterval: 300000,
 		},
 		Bean: &conf,
 	}
 	configManager.InitConfig()
 	fmt.Println("config name=" + conf.Name)
-	time.Sleep(1 * time.Minute)
+	time.Sleep(5 * time.Minute)
 	fmt.Println("refreshed config name=" + conf.Name)
 
 }

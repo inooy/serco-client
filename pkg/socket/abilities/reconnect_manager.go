@@ -26,11 +26,13 @@ type ReconnectManager struct {
 
 func NewReconnectManager(socketClient model.SocketClient) *ReconnectManager {
 	return &ReconnectManager{
-		socketClient: socketClient,
+		socketClient:       socketClient,
+		isConnectionHolden: true,
 	}
 }
 
 func (r *ReconnectManager) reset() {
+	log.Info("重置重连")
 	if r.timer != nil {
 		r.timer.Stop()
 	}
@@ -39,6 +41,7 @@ func (r *ReconnectManager) reset() {
 }
 
 func (r *ReconnectManager) handleReconnect() {
+	log.Info("handle reconnect")
 	if !r.running {
 		r.reset()
 		return
@@ -53,8 +56,10 @@ func (r *ReconnectManager) handleReconnect() {
 		err := r.socketClient.Connect()
 		if err != nil {
 			log.Error("reconnect fail", err.Error())
+			r.OnSocketDisconnection(err)
 			return
 		}
+		log.Info("reconnect success!")
 	}
 }
 

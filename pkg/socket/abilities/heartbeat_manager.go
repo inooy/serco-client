@@ -1,6 +1,7 @@
 package abilities
 
 import (
+	"github.com/inooy/serco-client/pkg/log"
 	"github.com/inooy/serco-client/pkg/socket/model"
 	"github.com/pkg/errors"
 	"strconv"
@@ -44,6 +45,7 @@ type HeartbeatManager struct {
 func NewHeartbeatManager(socketClient model.SocketClient) *HeartbeatManager {
 	return &HeartbeatManager{
 		socketClient: socketClient,
+		loseTimes:    -1,
 		options: HeartbeatOpts{
 			frequency:     30000,
 			feedLoseTimes: 3,
@@ -58,6 +60,7 @@ func (h *HeartbeatManager) dead() {
 }
 
 func (h *HeartbeatManager) Dead() {
+	log.Info("stop heartbeat")
 	h.loseTimes = 0
 	h.isDead = true
 	h.dead()
@@ -65,6 +68,14 @@ func (h *HeartbeatManager) Dead() {
 
 // Pulse 启动心跳
 func (h *HeartbeatManager) Pulse() {
+	h.dead()
+	if h.isDead {
+		h.isDead = false
+	}
+	h.pulse()
+}
+
+func (h *HeartbeatManager) pulse() {
 	h.dead()
 	if h.isDead {
 		return
@@ -90,24 +101,20 @@ func (h *HeartbeatManager) pulseHandler(pulseType HeartbeatType) {
 	if pulseType == SEND {
 		h.loseTimes++
 		if h.options.feedLoseTimes != -1 && h.loseTimes >= h.options.feedLoseTimes {
+			log.Warn("lose heartbeat..")
 			_ = h.socketClient.Close(errors.WithMessage(model.DogDeadErr, strconv.Itoa(h.loseTimes)))
-			h.Dead()
 		} else {
 			h.totalPulseTimes++
 			err := h.socketClient.SendHeartbeat()
 			if err != nil {
+				log.Warn("send heartbeat fail!")
 				_ = h.socketClient.Close(errors.WithMessage(model.DogDeadErr, strconv.Itoa(h.loseTimes)))
-				h.Dead()
 				return
 			}
-			h.Pulse()
+			h.pulse()
 		}
 	} else {
 		h.totalFeedTimes++
 		h.loseTimes = -1
-	}
-
-	if h.timer != nil {
-		h.timer.Stop()
 	}
 }

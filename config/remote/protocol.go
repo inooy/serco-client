@@ -90,13 +90,14 @@ func (codec *SercoCodec) Decode(buffer *bytes.Buffer) ([]model.Frame, *bytes.Buf
 func (codec *SercoCodec) Encode(frame model.Frame) (bf *bytes.Buffer, err error) {
 	var cmd model.Command
 	var framebuffer *bytes.Buffer
+	bf = new(bytes.Buffer)
 
 	switch frame.(type) {
 	case *model.HeartbeatFrame:
 		cmd = model.Heartbeat.Cmd
 		buf, err := model.Heartbeat.ToBuffer()
 		if err != nil {
-			return
+			return bf, err
 		}
 		framebuffer = buf
 	case model.PacketFrame:
@@ -104,7 +105,7 @@ func (codec *SercoCodec) Encode(frame model.Frame) (bf *bytes.Buffer, err error)
 		cmd = packet.Cmd
 		buf, err := packet.ToBuffer()
 		if err != nil {
-			return
+			return bf, err
 		}
 		framebuffer = buf
 	}

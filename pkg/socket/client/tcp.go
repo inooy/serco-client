@@ -13,33 +13,6 @@ import (
 
 var NooyCodec = codec.NooyCodec{}
 
-type CommonHeader struct {
-	GlobalSeq string `json:"globalSeq" mapstructure:"globalSeq"`
-	SubSeq    string `json:"subSeq" mapstructure:"subSeq"`
-}
-
-type RequestHeader struct {
-	Path string `json:"path"`
-	CommonHeader
-}
-
-type RequestDTO struct {
-	Header RequestHeader `json:"header"`
-	Body   interface{}   `json:"body"`
-}
-
-type Response struct {
-	Code  int         `json:"code"`
-	SeqId string      `json:"seqId"` // sequence number chosen by client
-	Msg   string      `json:"msg"`
-	Data  interface{} `json:"data"`
-}
-
-type ResponseDTO struct {
-	Header CommonHeader `json:"header"`
-	Body   Response     `json:"body"`
-}
-
 func RequestTcp(addr string, path string, content interface{}, timeout int) (interface{}, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Millisecond)
 	defer cancel()
@@ -56,7 +29,7 @@ func RequestTcp(addr string, path string, content interface{}, timeout int) (int
 		conn.AddListener(connection.Listener{
 			OnReceive: func(frame model.Frame) {
 				packet := (frame).(model.PacketFrame)
-				var response ResponseDTO
+				var response model.ResponseDTO
 				//将 map 转换为指定的结构体
 				if err := mapstructure.Decode(packet.Body, &response); err != nil {
 					fmt.Println(err)
@@ -74,10 +47,10 @@ func RequestTcp(addr string, path string, content interface{}, timeout int) (int
 			log.Error("连接失败")
 			cancel()
 		}
-		requestDTO := RequestDTO{
+		requestDTO := model.RequestDTO{
 			Body: content,
 		}
-		requestDTO.Header = RequestHeader{
+		requestDTO.Header = model.RequestHeader{
 			Path: path,
 		}
 		packet := model.PacketFrame{Cmd: 100, Body: requestDTO}

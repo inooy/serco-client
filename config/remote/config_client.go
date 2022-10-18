@@ -35,7 +35,7 @@ type AppPushMsg struct {
 type SocketClientImpl struct {
 	*client.Template
 	listener       ConfigFileListener
-	loginCallback  func(*client.Response)
+	loginCallback  func(*model.Response)
 	heartBeatFrame *model.HeartbeatFrame
 }
 
@@ -55,11 +55,15 @@ func NewConfigSocketClient(options connection.TcpSocketConnectOpts, listener Con
 }
 
 func (s *SocketClientImpl) handleFrame(frame model.Frame) {
-	packet := frame.(model.PacketFrame)
-	if packet.Cmd == model.CommandHeartbeat {
+	switch frame.(type) {
+	case *model.HeartbeatFrame:
+		s.ReceiveHeartbeat()
+	case model.HeartbeatFrame:
 		s.ReceiveHeartbeat()
 		return
-	} else if packet.Cmd == model.CommandAppPush {
+	}
+	packet := frame.(model.PacketFrame)
+	if packet.Cmd == model.CommandAppPush {
 		// todo 收到配置推送更新，处理配置更新
 		log.Info("receive app push")
 		var msg AppPushMsg
@@ -69,7 +73,7 @@ func (s *SocketClientImpl) handleFrame(frame model.Frame) {
 		}
 		s.listener.OnFileChange(&msg.Metadata)
 	} else if packet.Cmd == model.CommandReply {
-		var response client.ResponseDTO
+		var response model.ResponseDTO
 		//将 map 转换为指定的结构体
 		if err := mapstructure.Decode(packet.Body, &response); err != nil {
 			fmt.Println(err)
@@ -78,7 +82,7 @@ func (s *SocketClientImpl) handleFrame(frame model.Frame) {
 		s.Emitter.Emit(response.Header.SubSeq, &response)
 	} else if packet.Cmd == model.CommandLoginResponse {
 		// 登录响应
-		var response client.Response
+		var response model.Response
 		//将 map 转换为指定的结构体
 		if err := mapstructure.Decode(packet.Body, &response); err != nil {
 			fmt.Println(err)
@@ -102,15 +106,15 @@ func (s *SocketClientImpl) SendData(cmd int, data interface{}) error {
 
 var TimeoutErr = errors.New("timeout error")
 
-func (s *SocketClientImpl) Login(appName string, envType string, timeout int) (*client.Response, error) {
-	ch := make(chan *client.Response, 1)
+func (s *SocketClientImpl) Login(appName string, envType string, timeout int) (*model.Response, error) {
+	ch := make(chan *model.Response, 1)
 
 	var err error
 	// 每个请求生成唯一的请求id，超时移除对应回调监听
 	seq := tools.GetSnowflakeId()
 
 	go func() {
-		s.loginCallback = func(response *client.Response) {
+		s.loginCallback = func(response *model.Response) {
 			ch <- response
 		}
 		requestDTO := LoginRequest{
@@ -125,7 +129,7 @@ func (s *SocketClientImpl) Login(appName string, envType string, timeout int) (*
 			ch <- nil
 		}
 	}()
-	var result *client.Response
+	var result *model.Response
 
 	select {
 	case <-time.After(time.Duration(timeout) * time.Millisecond):

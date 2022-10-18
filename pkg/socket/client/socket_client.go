@@ -1,8 +1,7 @@
 package client
 
 import (
-	"context"
-	"fmt"
+	"errors"
 	"github.com/inooy/serco-client/pkg/log"
 	"github.com/inooy/serco-client/pkg/socket/abilities"
 	"github.com/inooy/serco-client/pkg/socket/connection"
@@ -24,18 +23,20 @@ func NewTemplate(impl model.Implement, socketConnection connection.SocketConnect
 	return &Template{
 		Implement:        impl,
 		socketConnection: socketConnection,
-		Emitter:          &RpcEventEmitter{},
+		Emitter: &RpcEventEmitter{
+			callbacks: map[string]func(*model.ResponseDTO){},
+		},
 	}
 }
 
 type RpcEventEmitter struct {
 	cLock     sync.RWMutex // protect the map
-	callbacks map[string]func(*ResponseDTO)
+	callbacks map[string]func(*model.ResponseDTO)
 }
 
-func (emitter *RpcEventEmitter) Once(id string, callback func(*ResponseDTO)) {
+func (emitter *RpcEventEmitter) Once(id string, callback func(*model.ResponseDTO)) {
 	emitter.cLock.Lock()
-	emitter.callbacks[id] = func(dto *ResponseDTO) {
+	emitter.callbacks[id] = func(dto *model.ResponseDTO) {
 		emitter.Off(id)
 		callback(dto)
 	}
@@ -50,7 +51,7 @@ func (emitter *RpcEventEmitter) Off(id string) {
 	emitter.cLock.RUnlock()
 }
 
-func (emitter *RpcEventEmitter) Emit(id string, dto *ResponseDTO) {
+func (emitter *RpcEventEmitter) Emit(id string, dto *model.ResponseDTO) {
 	if callback, ok := emitter.callbacks[id]; ok {
 		callback(dto)
 	}
@@ -64,7 +65,7 @@ func (t *Template) Mount() {
 			log.Info("socket status change:", status)
 			// 扩展心跳机制
 			if status == connection.CONNECTED {
-				t.heartbeatManager.Pulse()
+				go t.heartbeatManager.Pulse()
 				t.reconnectManager.OnSocketConnectionSuccess()
 			} else if status == connection.CLOSED || status == connection.ERROR {
 				t.heartbeatManager.Dead()
@@ -72,7 +73,7 @@ func (t *Template) Mount() {
 		},
 		OnError: func(err error) {
 			log.Error("socket error:", err.Error())
-			t.reconnectManager.OnSocketDisconnection(err)
+			go t.reconnectManager.OnSocketDisconnection(err)
 		},
 	})
 }
@@ -92,7 +93,10 @@ func (t *Template) SendHeartbeat() error {
 
 func (t *Template) Close(err error) error {
 	t.heartbeatManager.Dead()
-	t.reconnectManager.Shutdown()
+	// err为空表示手动关闭
+	if err == nil {
+		t.reconnectManager.Shutdown()
+	}
 	return t.socketConnection.Close(err)
 }
 
@@ -112,26 +116,22 @@ func (t *Template) IsConnect() bool {
 	return t.socketConnection.GetConnectionState() == connection.CONNECTED
 }
 
-func (t *Template) RequestTcp(path string, content interface{}, timeout int) (interface{}, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Millisecond)
-	defer cancel()
-
-	var result interface{}
+func (t *Template) RequestTcp(path string, content interface{}, timeout int) (*model.Response, error) {
+	ch := make(chan *model.Response, 1)
 	var err error
 	// 每个请求生成唯一的请求id，超时移除对应回调监听
 	seq := tools.GetSnowflakeId()
 
-	go func(ctx context.Context) {
+	go func() {
 		// 发送HTTP请求
-		t.Emitter.Once(seq, func(dto *ResponseDTO) {
-			result = dto.Body
-			cancel()
+		t.Emitter.Once(seq, func(dto *model.ResponseDTO) {
+			ch <- &dto.Body
 		})
 
-		requestDTO := RequestDTO{
+		requestDTO := model.RequestDTO{
 			Body: content,
 		}
-		requestDTO.Header = RequestHeader{
+		requestDTO.Header = model.RequestHeader{
 			Path: path,
 		}
 		requestDTO.Header.SubSeq = seq
@@ -139,13 +139,15 @@ func (t *Template) RequestTcp(path string, content interface{}, timeout int) (in
 		err = t.Send(packet)
 		if err != nil {
 			log.Errorf("发送失败: %s", err.Error())
-			cancel()
+			ch <- nil
 		}
-	}(ctx)
+	}()
+	var result *model.Response
 
 	select {
-	case <-ctx.Done():
-		fmt.Println("call successfully!!!")
+	case <-time.After(time.Duration(timeout) * time.Millisecond):
+		return nil, errors.New("timeout error")
+	case result = <-ch:
 		return result, err
 	}
 }

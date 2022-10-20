@@ -8,7 +8,7 @@ import (
 )
 
 func UpdateConfigBean(metadata *remote.Metadata, m *Manager) {
-	log.Info("准别更新配置")
+	log.Info("准备更新配置")
 	con := viper.New()
 	con.SetConfigType("yaml")
 	con.SetConfigName("config")

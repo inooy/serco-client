@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/inooy/serco-client/config/remote"
+	"github.com/inooy/serco-client/pkg/log"
 	"strings"
 	"sync"
 )
@@ -32,6 +33,8 @@ func (m *Manager) OnFileChange(metadata *remote.Metadata) {
 	UpdateConfigBean(metadata, m)
 	events, err := calcChange(m.MetadataList[metadata.FileId], metadata)
 	if err != nil {
+		log.Error("calc config change error:", err.Error())
+	} else {
 		m.publishEvent(events)
 	}
 	m.MetadataList[metadata.FileId] = metadata

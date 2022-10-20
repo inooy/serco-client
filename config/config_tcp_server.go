@@ -16,11 +16,7 @@ func FromServer(m *Manager) {
 	conn := remote.NewConfigSocketClient(connection.TcpSocketConnectOpts{
 		Host: m.Options.RemoteAddr,
 	}, m)
-	err := conn.Launch()
-	if err != nil {
-		panic(err)
-	}
-	result, err := conn.Login(m.Options.AppName, m.Options.Env, 6000)
+	result, err := conn.Launch(m.Options.AppName, m.Options.Env, 6000)
 	if err != nil {
 		panic(err)
 	}

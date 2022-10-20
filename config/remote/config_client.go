@@ -37,6 +37,9 @@ type SocketClientImpl struct {
 	listener       ConfigFileListener
 	loginCallback  func(*model.Response)
 	heartBeatFrame *model.HeartbeatFrame
+	starting       bool
+	appName        string
+	envType        string
 }
 
 func NewConfigSocketClient(options connection.TcpSocketConnectOpts, listener ConfigFileListener) *SocketClientImpl {
@@ -49,6 +52,31 @@ func NewConfigSocketClient(options connection.TcpSocketConnectOpts, listener Con
 	conn.AddListener(connection.Listener{
 		OnReceive: func(frame model.Frame) {
 			impl.handleFrame(frame)
+		},
+		OnStatusChange: func(status connection.Status) {
+			// 非启动时重连，那么重新登录
+			if status == connection.CONNECTED && !impl.starting {
+				log.Info("reconnect success, start re login...")
+				result, err := impl.Login(impl.appName, impl.envType, 6000)
+				if err != nil {
+					_ = impl.Close(err)
+					return
+				}
+				if result.Code != 200 {
+					_ = impl.Close(err)
+					return
+				}
+				log.Info("re login success!")
+				var list []Metadata
+				//将 map 转换为指定的结构体
+				if err = mapstructure.Decode(result.Data, &list); err != nil {
+					_ = impl.Close(err)
+					return
+				}
+				for i := range list {
+					impl.listener.OnFileChange(&list[i])
+				}
+			}
 		},
 	})
 	return impl
@@ -139,9 +167,17 @@ func (s *SocketClientImpl) Login(appName string, envType string, timeout int) (*
 	}
 }
 
-func (s *SocketClientImpl) Launch() error {
+func (s *SocketClientImpl) Launch(appName string, envType string, timeout int) (*model.Response, error) {
+	s.starting = true
+	s.appName = appName
+	s.envType = envType
 	s.Mount()
-	return s.Connect()
+	if err := s.Connect(); err != nil {
+		return nil, err
+	}
+	res, err := s.Login(appName, envType, timeout)
+	s.starting = false
+	return res, err
 }
 
 func (s *SocketClientImpl) Shutdown() error {

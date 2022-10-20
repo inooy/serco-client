@@ -45,13 +45,14 @@ func calcChange(old *remote.Metadata, current *remote.Metadata) ([]*PropChangeEv
 	flapOld := make(map[string]interface{})
 	flapMap(currentMap, flapCurrent, "")
 	flapMap(oldMap, flapOld, "")
-	return calcMap(oldMap, currentMap), nil
+	return calcMap(flapOld, flapCurrent), nil
 }
 
 func flapMap(currentMap map[string]interface{}, result map[string]interface{}, keyPrefix string) {
 	for key := range currentMap {
+		subKey := key
 		if keyPrefix != "" {
-			keyPrefix = keyPrefix + "." + key
+			subKey = keyPrefix + "." + key
 		}
 		switch reflect.TypeOf(currentMap[key]).Kind() {
 		case reflect.Int:
@@ -69,9 +70,9 @@ func flapMap(currentMap map[string]interface{}, result map[string]interface{}, k
 		case reflect.Slice:
 			fallthrough
 		case reflect.Bool:
-			result[keyPrefix] = currentMap[key]
+			result[subKey] = currentMap[key]
 		case reflect.Map:
-			flapMap(currentMap[key].(map[string]interface{}), result, keyPrefix)
+			flapMap(currentMap[key].(map[string]interface{}), result, subKey)
 		}
 	}
 }

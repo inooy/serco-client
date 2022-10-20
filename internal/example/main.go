@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/inooy/serco-client/config"
+	"github.com/inooy/serco-client/pkg/log"
 	"time"
 )
 
@@ -22,6 +23,13 @@ func main() {
 		Bean: &conf,
 	}
 	configManager.InitConfig()
+	configManager.On("app.name", func(events []*config.PropChangeEvent) {
+		log.Infof("监听到配置属性更新, key=app.name, list len=%d", len(events))
+		for i := range events {
+			log.Infof("配置change event: %+v", events[i])
+		}
+
+	})
 	fmt.Println("config name=" + conf.Name)
 	time.Sleep(5 * time.Minute)
 	fmt.Println("refreshed config name=" + conf.Name)

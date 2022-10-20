@@ -40,7 +40,7 @@ func (conn *TcpConnection) Connect() error {
 		return err
 	}
 	conn.Conn = socket
-	conn.SetConnectionStatus(CONNECTED)
 	go conn.setupSocket(socket)
+	conn.SetConnectionStatus(CONNECTED)
 	return nil
 }

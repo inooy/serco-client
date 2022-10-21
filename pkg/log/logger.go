@@ -9,7 +9,10 @@ import (
 	"time"
 )
 
-var errorLogger *zap.SugaredLogger
+type name interface {
+}
+
+var sugaredLogger *zap.SugaredLogger
 
 func init() {
 	// 设置一些基本日志格式 具体含义还比较好理解，直接看zap源码也不难懂
@@ -33,23 +36,17 @@ func init() {
 		return lvl >= zapcore.InfoLevel
 	})
 
-	errorLevel := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
-		return lvl >= zapcore.ErrorLevel
-	})
-
-	// 获取 info、error日志文件的io.Writer 抽象 getWriter() 在下方实现
-	infoWriter := getWriter("./logs/info.log")
-	errorWriter := getWriter("./logs/error.log")
-
 	// 最后创建具体的Logger
 	core := zapcore.NewTee(
 		zapcore.NewCore(encoder, zapcore.AddSync(os.Stdout), infoLevel), //打印到控制台
-		zapcore.NewCore(encoder, zapcore.AddSync(infoWriter), infoLevel),
-		zapcore.NewCore(encoder, zapcore.AddSync(errorWriter), errorLevel),
 	)
 
 	log := zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1)) // 需要传入 zap.AddCaller() 才会显示打日志点的文件名和行数, 有点小坑
-	errorLogger = log.Sugar()
+	sugaredLogger = log.Sugar()
+}
+
+func SetupLogger(log *zap.SugaredLogger) {
+	sugaredLogger = log
 }
 
 func getWriter(filename string) io.Writer {
@@ -69,57 +66,57 @@ func getWriter(filename string) io.Writer {
 	return hook
 }
 func Debug(args ...interface{}) {
-	errorLogger.Debug(args...)
+	sugaredLogger.Debug(args...)
 }
 
 func Debugf(template string, args ...interface{}) {
-	errorLogger.Debugf(template, args...)
+	sugaredLogger.Debugf(template, args...)
 }
 
 func Info(args ...interface{}) {
-	errorLogger.Info(args...)
+	sugaredLogger.Info(args...)
 }
 
 func Infof(template string, args ...interface{}) {
-	errorLogger.Infof(template, args...)
+	sugaredLogger.Infof(template, args...)
 }
 
 func Warn(args ...interface{}) {
-	errorLogger.Warn(args...)
+	sugaredLogger.Warn(args...)
 }
 
 func Warnf(template string, args ...interface{}) {
-	errorLogger.Warnf(template, args...)
+	sugaredLogger.Warnf(template, args...)
 }
 
 func Error(args ...interface{}) {
-	errorLogger.Error(args...)
+	sugaredLogger.Error(args...)
 }
 
 func Errorf(template string, args ...interface{}) {
-	errorLogger.Errorf(template, args...)
+	sugaredLogger.Errorf(template, args...)
 }
 
 func DPanic(args ...interface{}) {
-	errorLogger.DPanic(args...)
+	sugaredLogger.DPanic(args...)
 }
 
 func DPanicf(template string, args ...interface{}) {
-	errorLogger.DPanicf(template, args...)
+	sugaredLogger.DPanicf(template, args...)
 }
 
 func Panic(args ...interface{}) {
-	errorLogger.Panic(args...)
+	sugaredLogger.Panic(args...)
 }
 
 func Panicf(template string, args ...interface{}) {
-	errorLogger.Panicf(template, args...)
+	sugaredLogger.Panicf(template, args...)
 }
 
 func Fatal(args ...interface{}) {
-	errorLogger.Fatal(args...)
+	sugaredLogger.Fatal(args...)
 }
 
 func Fatalf(template string, args ...interface{}) {
-	errorLogger.Fatalf(template, args...)
+	sugaredLogger.Fatalf(template, args...)
 }

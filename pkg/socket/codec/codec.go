@@ -6,6 +6,6 @@ import (
 )
 
 type Codec interface {
-	Decode(buffer *bytes.Buffer) ([]model.Frame, *bytes.Buffer)
+	Decode(buffer []byte) ([]model.Frame, []byte)
 	Encode(frame model.Frame) (*bytes.Buffer, error)
 }

@@ -12,23 +12,21 @@ import (
 /**
 协议说明：
 字节编码：
-1 协议版本号
-2 cmd指令 数字 0~255
-3 mask
+1 魔数 v
+2 协议版本号
+3 cmd指令 数字 0~255
 4 -7 Length 整个报文长度
 8-Length body
 */
 
-const HeadMetadataLen int32 = 7
-const ProtocolVersion int8 = 1
-
-var VersionContent = int8(1)
-var Magic = byte('v')
+const HeadMetadataLen int = 7
+const ProtocolVersion byte = 1
+const Magic = byte('v')
 
 type SercoCodec struct {
 }
 
-func deserializeFrame(cmd model.Command, buffer bytes.Buffer) (model.Frame, error) {
+func deserializeFrame(cmd model.Command, buffer []byte) (model.Frame, error) {
 	switch cmd {
 	// 收到心跳结果
 	case model.CommandHeartbeat:
@@ -37,7 +35,7 @@ func deserializeFrame(cmd model.Command, buffer bytes.Buffer) (model.Frame, erro
 		frame := model.PacketFrame{
 			Cmd: cmd,
 		}
-		err := json.Unmarshal(buffer.Bytes(), &frame.Body)
+		err := json.Unmarshal(buffer, &frame.Body)
 		if err != nil {
 			return nil, err
 		}
@@ -45,46 +43,48 @@ func deserializeFrame(cmd model.Command, buffer bytes.Buffer) (model.Frame, erro
 	}
 }
 
-func (codec *SercoCodec) Decode(buffer *bytes.Buffer) ([]model.Frame, *bytes.Buffer) {
+func (codec *SercoCodec) Decode(buffer []byte) ([]model.Frame, []byte) {
 	var frames = make([]model.Frame, 0)
+	offset := 0
 	for {
-		if HeadMetadataLen >= int32(buffer.Len()) {
+		if len(buffer)-offset <= HeadMetadataLen {
 			break
 		}
+		headBytes := buffer[offset:(offset + HeadMetadataLen)]
+		headBuff := bytes.NewBuffer(headBytes)
 		// read magic
-		_, err := buffer.ReadByte()
+		_, err := headBuff.ReadByte()
 		if err != nil {
 			panic(err)
 		}
 		// read version
-		version, err := buffer.ReadByte()
-		if version != 1 {
+		version, err := headBuff.ReadByte()
+
+		if version != ProtocolVersion {
 			panic(errors.New("protocol version not match: need 1, but real is " + strconv.Itoa(int(version))))
 		}
 		var cmd int8
-		err = binary.Read(buffer, binary.BigEndian, &cmd)
+		err = binary.Read(headBuff, binary.BigEndian, &cmd)
 		var frameLength int32
-		err = binary.Read(buffer, binary.BigEndian, &frameLength)
+		err = binary.Read(headBuff, binary.BigEndian, &frameLength)
 		if err != nil {
 			panic(err)
 		}
-		if frameLength-HeadMetadataLen > int32(buffer.Len()) {
+		frameStart := offset + HeadMetadataLen
+		frameEnd := offset + int(frameLength)
+		if frameEnd > len(buffer) {
 			// not all bytes of next frame received
 			break
 		}
-		body := make([]byte, frameLength-HeadMetadataLen)
-		_, err = buffer.Read(body)
-		if err != nil {
-			panic(err)
-		}
-		frameBuffer := bytes.NewBuffer(body)
-		frame, err := deserializeFrame(model.Command(cmd), *frameBuffer)
+		body := buffer[frameStart:frameEnd]
+		frame, err := deserializeFrame(model.Command(cmd), body)
 		if err != nil {
 			panic(err)
 		}
 		frames = append(frames, frame)
+		offset = frameEnd
 	}
-	return frames, buffer
+	return frames, buffer[offset:]
 }
 
 func (codec *SercoCodec) Encode(frame model.Frame) (bf *bytes.Buffer, err error) {
@@ -110,7 +110,7 @@ func (codec *SercoCodec) Encode(frame model.Frame) (bf *bytes.Buffer, err error)
 		framebuffer = buf
 	}
 
-	var frameLength = int32(framebuffer.Len())
+	var frameLength = framebuffer.Len()
 	//mask := ProtocolVersion | 0b01111111
 	//mask = mask | 64
 	//mask = mask & (32 ^ 0b01111111)
@@ -130,7 +130,7 @@ func (codec *SercoCodec) Encode(frame model.Frame) (bf *bytes.Buffer, err error)
 	if err != nil {
 		return
 	}
-	err = binary.Write(bf, binary.BigEndian, frameLength+HeadMetadataLen)
+	err = binary.Write(bf, binary.BigEndian, int32(frameLength+HeadMetadataLen))
 	if err != nil {
 		return
 	}

@@ -146,8 +146,9 @@ func (conn *template) handleError(err error) {
 
 func (conn *template) readFrames(buffer []byte) []model.Frame {
 	conn.Buf.Write(buffer)
-	frames, remaining := conn.Codec.Decode(&conn.Buf)
-	conn.Buf = *remaining
+	frames, remaining := conn.Codec.Decode(conn.Buf.Bytes())
+	conn.Buf.Reset()
+	conn.Buf.Write(remaining)
 	return frames
 }
 

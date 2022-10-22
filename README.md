@@ -1,20 +1,26 @@
 
-# serco-client
-serco: 服务协调者
+# 🎉 serco-client 
 
-serco-client: 客户端
+- serco: 服务协调者
+- serco-client: 客户端
 
-# TODO List
+# 🎯 TODO List 
 
 1. [x] 心跳检测与断线重连
 2. [x] 周期性轮询配置是否更新
-3. [ ] 提供配置监听
+3. [x] 提供配置监听
 4. [ ] 支持集群
 5. [ ] 故障转移
 6. [ ] 分布式一致性
 
-# ISSUE
+# 💯 使用 
+引入依赖：
+```shell
+go get github.com/inooy/serco-client
+```
 
-1. [x] 断线重连后，需要重新登录，用于监听配置；但是重连时应该注意，不要全都返回所有配置，不然配置中心重启瞬时压力太大
-
+更新依赖
+```shell
+go get github.com/inooy/serco-client@v0.1.1
+```
 

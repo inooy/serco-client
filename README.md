@@ -4,8 +4,12 @@
 - serco: 服务协调者
 - serco-client: 客户端
 
-# 🎯 TODO List 
+# 🎊 TODO List 
+1. [ ] 提供shutdown接口
+2. [ ] 提供日志接口封装
+3. [ ] 补充使用文档
 
+# 🎯 RoadMap
 1. [x] 心跳检测与断线重连
 2. [x] 周期性轮询配置是否更新
 3. [x] 提供配置监听

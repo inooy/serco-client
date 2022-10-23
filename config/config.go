@@ -22,11 +22,33 @@ type Options struct {
 	PollInterval int
 }
 
+type Status string
+
+const (
+	NotInit  Status = "NotInit"
+	Starting Status = "Starting"
+	Started  Status = "Started"
+	Stopping Status = "Stopping"
+	Stopped  Status = "Stopped"
+)
+
 type Manager struct {
 	Options      Options
 	Bean         interface{}
 	emitter      PropEventEmitter
 	MetadataList map[string]*remote.Metadata
+	Status       Status
+}
+
+func NewManager(bean interface{}) *Manager {
+	return &Manager{
+		Status:       NotInit,
+		MetadataList: map[string]*remote.Metadata{},
+		emitter: PropEventEmitter{
+			callbacks: make(map[string]func([]*PropChangeEvent)),
+		},
+		Bean: bean,
+	}
 }
 
 func (m *Manager) OnFileChange(metadata *remote.Metadata) {
@@ -60,15 +82,20 @@ func (m *Manager) On(id string, callback func([]*PropChangeEvent)) {
 
 // InitConfig init config, need invoke when app launch
 func (m *Manager) InitConfig() {
-	m.MetadataList = map[string]*remote.Metadata{}
-	m.emitter = PropEventEmitter{
-		callbacks: make(map[string]func([]*PropChangeEvent)),
-	}
 	once.Do(func() {
+		m.Status = Starting
 		if m.Options.RemoteAddr == "" {
 			FromFile(m)
 		} else {
 			FromServer(m)
 		}
+		m.Status = Started
 	})
+}
+
+func (m *Manager) Shutdown() {
+	if m.Status == Started {
+		// todo close
+		m.Status = Stopped
+	}
 }

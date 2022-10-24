@@ -40,14 +40,15 @@ type Manager struct {
 	Status       Status
 }
 
-func NewManager(bean interface{}) *Manager {
+func NewManager(options Options, bean interface{}) *Manager {
 	return &Manager{
 		Status:       NotInit,
 		MetadataList: map[string]*remote.Metadata{},
 		emitter: PropEventEmitter{
 			callbacks: make(map[string]func([]*PropChangeEvent)),
 		},
-		Bean: bean,
+		Options: options,
+		Bean:    bean,
 	}
 }
 

@@ -38,6 +38,7 @@ type Manager struct {
 	emitter      PropEventEmitter
 	MetadataList map[string]*remote.Metadata
 	Status       Status
+	Client       *remote.SercoSocketClient
 }
 
 func NewManager(options Options, bean interface{}) *Manager {
@@ -96,7 +97,12 @@ func (m *Manager) InitConfig() {
 
 func (m *Manager) Shutdown() {
 	if m.Status == Started {
-		// todo close
+		log.Info("start shutdown config")
+		m.Status = Stopping
+		if m.Client != nil {
+			_ = m.Client.Close(nil)
+		}
 		m.Status = Stopped
+		log.Info("config shutdown finished!")
 	}
 }

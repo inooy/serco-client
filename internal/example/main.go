@@ -32,4 +32,5 @@ func main() {
 	fmt.Println("config name=" + conf.Name)
 	time.Sleep(5 * time.Minute)
 	fmt.Println("refreshed config name=" + conf.Name)
+	configManager.Shutdown()
 }

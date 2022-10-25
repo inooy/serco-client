@@ -13,10 +13,10 @@ import (
 func FromServer(m *Manager) {
 	log.Info("从配置中心获取配置信息")
 
-	conn := remote.NewConfigSocketClient(connection.TcpSocketConnectOpts{
+	m.Client = remote.NewConfigSocketClient(connection.TcpSocketConnectOpts{
 		Host: m.Options.RemoteAddr,
 	}, m)
-	result, err := conn.Launch(m.Options.AppName, m.Options.Env, 6000)
+	result, err := m.Client.Launch(m.Options.AppName, m.Options.Env, 6000)
 	if err != nil {
 		panic(err)
 	}
@@ -49,10 +49,10 @@ func FromServer(m *Manager) {
 			panic(err)
 		}
 	}
-	go startPoll(m, conn)
+	go startPoll(m)
 }
 
-func startPoll(m *Manager, conn *remote.SocketClientImpl) {
+func startPoll(m *Manager) {
 	defer func() {
 		log.Info("poll config exit")
 	}()
@@ -72,7 +72,7 @@ func startPoll(m *Manager, conn *remote.SocketClientImpl) {
 			EnvType: m.Options.Env,
 			Old:     old,
 		}
-		result, err := conn.RequestTcp("/check", req, 3000)
+		result, err := m.Client.RequestTcp("/check", req, 3000)
 		if err != nil {
 			log.Error("config center poll error!", err.Error())
 			continue

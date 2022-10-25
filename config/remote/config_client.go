@@ -32,7 +32,7 @@ type AppPushMsg struct {
 	Metadata Metadata `json:"metadata" mapstructure:"metadata"`
 }
 
-type SocketClientImpl struct {
+type SercoSocketClient struct {
 	*client.Template
 	listener       ConfigFileListener
 	loginCallback  func(*model.Response)
@@ -42,8 +42,8 @@ type SocketClientImpl struct {
 	envType        string
 }
 
-func NewConfigSocketClient(options connection.TcpSocketConnectOpts, listener ConfigFileListener) *SocketClientImpl {
-	impl := &SocketClientImpl{
+func NewConfigSocketClient(options connection.TcpSocketConnectOpts, listener ConfigFileListener) *SercoSocketClient {
+	impl := &SercoSocketClient{
 		listener: listener,
 	}
 	conn := connection.NewTcpConnection(options, &SercoCodec{})
@@ -82,7 +82,7 @@ func NewConfigSocketClient(options connection.TcpSocketConnectOpts, listener Con
 	return impl
 }
 
-func (s *SocketClientImpl) handleFrame(frame model.Frame) {
+func (s *SercoSocketClient) handleFrame(frame model.Frame) {
 	switch frame.(type) {
 	case *model.HeartbeatFrame:
 		s.ReceiveHeartbeat()
@@ -121,11 +121,11 @@ func (s *SocketClientImpl) handleFrame(frame model.Frame) {
 	}
 }
 
-func (s *SocketClientImpl) GetHeartbeatFrame() model.Frame {
+func (s *SercoSocketClient) GetHeartbeatFrame() model.Frame {
 	return s.heartBeatFrame
 }
 
-func (s *SocketClientImpl) SendData(cmd int, data interface{}) error {
+func (s *SercoSocketClient) SendData(cmd int, data interface{}) error {
 	return s.Send(model.PacketFrame{
 		Cmd:  model.Command(cmd),
 		Body: data,
@@ -134,7 +134,7 @@ func (s *SocketClientImpl) SendData(cmd int, data interface{}) error {
 
 var TimeoutErr = errors.New("timeout error")
 
-func (s *SocketClientImpl) Login(appName string, envType string, timeout int) (*model.Response, error) {
+func (s *SercoSocketClient) Login(appName string, envType string, timeout int) (*model.Response, error) {
 	ch := make(chan *model.Response, 1)
 
 	var err error
@@ -167,7 +167,7 @@ func (s *SocketClientImpl) Login(appName string, envType string, timeout int) (*
 	}
 }
 
-func (s *SocketClientImpl) Launch(appName string, envType string, timeout int) (*model.Response, error) {
+func (s *SercoSocketClient) Launch(appName string, envType string, timeout int) (*model.Response, error) {
 	s.starting = true
 	s.appName = appName
 	s.envType = envType
@@ -180,6 +180,6 @@ func (s *SocketClientImpl) Launch(appName string, envType string, timeout int) (
 	return res, err
 }
 
-func (s *SocketClientImpl) Shutdown() error {
+func (s *SercoSocketClient) Shutdown() error {
 	return s.Close(nil)
 }

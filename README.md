@@ -5,9 +5,9 @@
 - serco-client: 客户端
 
 # 🎊 TODO List 
-1. [ ] 提供shutdown接口
-2. [ ] 提供日志接口封装
-3. [ ] 补充使用文档
+1. [x] 提供shutdown接口
+2. [x] 补充使用文档
+3. [ ] 提供日志接口封装
 
 # 🎯 RoadMap
 1. [x] 心跳检测与断线重连

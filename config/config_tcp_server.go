@@ -58,6 +58,10 @@ func startPoll(m *Manager) {
 	}()
 	log.Info("start config center poll")
 	for {
+		if m.Status == Stopping || m.Status == Stopped {
+			log.Info("stop config poll")
+			return
+		}
 		var interval = 120000
 		if m.Options.PollInterval > 0 {
 			interval = m.Options.PollInterval

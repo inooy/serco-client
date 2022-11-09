@@ -44,11 +44,11 @@ func (emitter *RpcEventEmitter) Once(id string, callback func(*model.ResponseDTO
 }
 
 func (emitter *RpcEventEmitter) Off(id string) {
-	emitter.cLock.RLock()
+	emitter.cLock.Lock()
 	if _, ok := emitter.callbacks[id]; ok {
 		delete(emitter.callbacks, id)
 	}
-	emitter.cLock.RUnlock()
+	emitter.cLock.Unlock()
 }
 
 func (emitter *RpcEventEmitter) Emit(id string, dto *model.ResponseDTO) {

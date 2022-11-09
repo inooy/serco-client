@@ -9,6 +9,7 @@ import (
 	"github.com/inooy/serco-client/pkg/socket/model"
 	"github.com/inooy/serco-client/pkg/tools"
 	"github.com/mitchellh/mapstructure"
+	"sync"
 	"time"
 )
 
@@ -32,6 +33,13 @@ type AppPushMsg struct {
 	Metadata Metadata `json:"metadata" mapstructure:"metadata"`
 }
 
+type EventDTO struct {
+	Id       string      `json:"id"`       // 事件id
+	Topic    string      `json:"topic"`    // 主题
+	SubTopic string      `json:"subTopic"` // 子主题
+	Data     interface{} `json:"data"`     // 事件数据
+}
+
 type SercoSocketClient struct {
 	*client.Template
 	listener       ConfigFileListener
@@ -40,11 +48,40 @@ type SercoSocketClient struct {
 	starting       bool
 	appName        string
 	envType        string
+	EventEmitter   EventEmitter
+}
+
+type EventEmitter struct {
+	cLock     sync.RWMutex // protect the map
+	callbacks map[string]func(*EventDTO)
+}
+
+func (emitter *EventEmitter) On(topic string, callback func(*EventDTO)) {
+	emitter.cLock.Lock()
+	emitter.callbacks[topic] = callback
+	emitter.cLock.Unlock()
+}
+
+func (emitter *EventEmitter) Off(topic string) {
+	emitter.cLock.Lock()
+	if _, ok := emitter.callbacks[topic]; ok {
+		delete(emitter.callbacks, topic)
+	}
+	emitter.cLock.Unlock()
+}
+
+func (emitter *EventEmitter) Emit(topic string, dto *EventDTO) {
+	if callback, ok := emitter.callbacks[topic]; ok {
+		callback(dto)
+	}
 }
 
 func NewConfigSocketClient(options connection.TcpSocketConnectOpts, listener ConfigFileListener) *SercoSocketClient {
 	impl := &SercoSocketClient{
 		listener: listener,
+		EventEmitter: EventEmitter{
+			callbacks: make(map[string]func(*EventDTO)),
+		},
 	}
 	conn := connection.NewTcpConnection(options, &SercoCodec{})
 	template := client.NewTemplate(impl, conn)
@@ -118,6 +155,17 @@ func (s *SercoSocketClient) handleFrame(frame model.Frame) {
 		if s.loginCallback != nil {
 			s.loginCallback(&response)
 		}
+	} else if packet.Cmd == model.CommandEvent {
+		log.Infof("收到事件")
+		// 事件机制，根据topic分发事件
+		// topic subTopic
+		var event EventDTO
+		//将 map 转换为指定的结构体
+		if err := mapstructure.Decode(packet.Body, &event); err != nil {
+			fmt.Println(err)
+		}
+		// 根据主题下发事件
+		s.EventEmitter.Emit(event.Topic, &event)
 	}
 }
 

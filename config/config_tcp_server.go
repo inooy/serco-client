@@ -76,7 +76,7 @@ func startPoll(m *Manager) {
 			EnvType: m.Options.Env,
 			Old:     old,
 		}
-		result, err := m.Client.RequestTcp("/check", req, 3000)
+		result, err := m.Client.RequestTcp("/api/config/check", req, 3000)
 		if err != nil {
 			log.Error("config center poll error!", err.Error())
 			continue

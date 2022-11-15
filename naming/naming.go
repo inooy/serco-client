@@ -2,14 +2,16 @@ package naming
 
 import (
 	"github.com/inooy/serco-client/core"
-	"github.com/inooy/serco-client/pkg/tools"
 )
 
 type ServiceManager struct {
 	AppId      string
 	Env        string
 	InstanceId string
+	Options    *Options
 	Client     *core.SocketClientImpl
+	App        map[string]*Instance
+	Providers  []*SubscribeProvider
 }
 
 // Options config base options
@@ -23,14 +25,13 @@ type Options struct {
 	// Configure polling interval in milliseconds.
 	// This mechanism mainly avoids the loss of change notice
 	PollInterval int
+	InstanceId   string
 }
 
-func NewNamingService(appId string, env string, client *core.SocketClientImpl) *ServiceManager {
+func NewNamingService(options *Options, client *core.SocketClientImpl) *ServiceManager {
 	manager := ServiceManager{
-		Client:     client,
-		AppId:      appId,
-		Env:        env,
-		InstanceId: appId + tools.GetSnowflakeId(),
+		Client:  client,
+		Options: options,
 	}
 	manager.Client.OnReconnected(func(isReconnect bool) error {
 		// 重连，需要重新注册
@@ -39,6 +40,25 @@ func NewNamingService(appId string, env string, client *core.SocketClientImpl) *
 	return &manager
 }
 
-func Setup(autoRegistry bool) {
+func (m *ServiceManager) GetInstance(appName string) ([]*Instance, error) {
+
+	return nil, nil
+}
+
+func (m *ServiceManager) Subscribe(providers []*SubscribeProvider) error {
+	subscribe := SubscribeCmd{
+		InstanceId: m.InstanceId,
+		Subscribes: providers,
+	}
+
+	// 订阅服务
+	return m.SubscribeRequest(subscribe)
+}
+
+func (m *ServiceManager) Shutdown() error {
+	return m.Cancel()
+}
+
+func (m *ServiceManager) poll() {
 
 }

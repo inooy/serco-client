@@ -3,6 +3,7 @@ package naming
 import (
 	"errors"
 	"github.com/inooy/serco-client/pkg/log"
+	"time"
 )
 
 func (m *ServiceManager) Registry() error {
@@ -10,10 +11,22 @@ func (m *ServiceManager) Registry() error {
 		AppId:      m.AppId,
 		Env:        m.Env,
 		InstanceId: m.InstanceId,
-		Addrs:      []string{"http://1.1.1.1"},
-		Status:     1,
+		// todo 支持扩展
+		Addrs:  []string{"http://1.1.1.1"},
+		Status: 1,
 	}
 	return m.RegistryRequest(req)
+}
+
+func (m *ServiceManager) Cancel() error {
+	var req = CancelCmd{
+		AppId:           m.AppId,
+		Env:             m.Env,
+		InstanceId:      m.InstanceId,
+		LatestTimestamp: time.Now().UnixNano() / 1e6,
+		Replication:     false,
+	}
+	return m.CancelRequest(req)
 }
 
 func (m *ServiceManager) RegistryRequest(req RegisterCmd) error {

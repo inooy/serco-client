@@ -3,41 +3,43 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/inooy/serco-client/config"
-	"github.com/inooy/serco-client/naming"
 	"github.com/inooy/serco-client/pkg/log"
+	"github.com/inooy/serco-client/serco"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 )
 
-type CustomConfig struct {
-	Name string `json:"name"`
+func main() {
+	// 构造配置管理器
+	manager := serco.NewSerco(serco.Options{
+		AppName:         "core-consumer",
+		Env:             "dev",
+		RemoteAddr:      "127.0.0.1:9011",
+		PollInterval:    300000,
+		RegistryEnabled: true,
+		ConfigEnabled:   false,
+		InstanceId:      "",
+	})
+
+	err := manager.Registry()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("config name=" + manager.Options.AppName)
+	graceShutdown(func(ctx context.Context) {
+		err = manager.Shutdown()
+		if err != nil {
+			fmt.Println(err)
+		}
+		ctx.Done()
+	})
+
 }
 
-func main() {
-	// 配置bean，配置信息会绑定到bean中，配置刷新时，bean属性会一起刷新
-	conf := CustomConfig{}
-	// 构造配置管理器
-	configManager := config.NewManager(config.Options{
-		AppName:      "core-consumer",
-		Env:          "dev",
-		RemoteAddr:   "127.0.0.1:9011",
-		PollInterval: 300000,
-	}, &conf)
-	configManager.InitConfig()
-	// 监听配置修改
-
-	m := naming.NewNamingService("core-consumer", "dev", configManager.Client)
-
-	var req1 = naming.RegisterCmd{AppId: "core-provider", Env: "dev", InstanceId: "core-provider", Addrs: []string{"http://1.1.1.1/testapp"}, Status: 1}
-	//var req2 = &naming.RegisterCmd{AppId: "com.xx.testapp", Env: "test", Hostname: "myhost2", Addrs: []string{"http://2.2.2.2/testapp"}, Status: 1}
-
-	m.RegistryRequest(req1)
-
-	fmt.Println("config name=" + conf.Name)
-
+func graceShutdown(callback func(context.Context)) {
 	// 等待中断信号来优雅地关闭服务器，为关闭服务器操作设置一个5秒的超时
 	quit := make(chan os.Signal, 1) // 创建一个接收信号的通道
 	// kill 默认会发送 syscall.SIGTERM 信号
@@ -51,23 +53,12 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	cancelReq := naming.CancelCmd{
-		AppId:           req1.AppId,
-		Env:             req1.Env,
-		InstanceId:      req1.InstanceId,
-		LatestTimestamp: time.Now().UnixNano(),
-	}
-	m.CancelRequest(cancelReq)
-
-	configManager.Shutdown()
+	go callback(ctx)
 
 	select {
 	case <-ctx.Done():
 		log.Warn("timeout of 10 seconds")
 	}
-	log.Info("server exiting")
 
-	//time.Sleep(5 * time.Minute)
-	fmt.Println("refreshed config name=" + conf.Name)
-	configManager.Shutdown()
+	log.Info("shutdown finished!")
 }

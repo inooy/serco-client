@@ -16,8 +16,8 @@ type RegisterCmd struct {
 
 // SubscribeCmd 服务订阅参数
 type SubscribeCmd struct {
-	InstanceId string              `json:"instanceId" mapstructure:"instanceId"`
-	Subscribes []SubscribeProvider `json:"subscribes" mapstructure:"subscribes"`
+	InstanceId string               `json:"instanceId" mapstructure:"instanceId"`
+	Subscribes []*SubscribeProvider `json:"subscribes" mapstructure:"subscribes"`
 }
 
 type SubscribeProvider struct {

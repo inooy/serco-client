@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/inooy/serco-client/config"
 	"github.com/inooy/serco-client/core"
 	"github.com/inooy/serco-client/naming"
 	"github.com/inooy/serco-client/pkg/log"
+	"github.com/inooy/serco-client/serco"
 	"os"
 	"os/signal"
 	"strings"
@@ -21,18 +21,17 @@ type CustomConfig struct {
 func main() {
 	// 配置bean，配置信息会绑定到bean中，配置刷新时，bean属性会一起刷新
 	conf := CustomConfig{}
-	// 构造配置管理器
-	configManager := config.NewManager(config.Options{
-		AppName:      "core-demo",
-		Env:          "dev",
-		RemoteAddr:   "127.0.0.1:9011",
-		PollInterval: 120000,
-	}, &conf)
-	configManager.InitConfig()
 
-	var req1 = naming.RegisterCmd{AppId: "core-provider", Env: "dev", InstanceId: "core.provider", Addrs: []string{"http://1.1.1.1/testapp"}, Status: 1}
-
-	manager := naming.ServiceManager{Client: configManager.Client}
+	manager := serco.NewSerco(serco.Options{
+		AppName:         "core-demo",
+		Env:             "dev",
+		RemoteAddr:      "127.0.0.1:9011",
+		PollInterval:    120000,
+		RegistryEnabled: true,
+		ConfigEnabled:   false,
+		InstanceId:      "",
+	})
+	manager.SetupConfig(&conf)
 
 	// AppId: "core-provider", Env: "dev", Hostname: "core.provider",
 	manager.Client.On(core.NamespaceDiscovery, func(dto *core.EventDTO) {
@@ -43,29 +42,20 @@ func main() {
 		Protocol: "http",
 		Provider: "core-provider",
 	}
-	subscribe := naming.SubscribeCmd{
-		InstanceId: "core-consumer1",
-		Subscribes: []naming.SubscribeProvider{provider},
-	}
 
 	// 订阅服务
-	err := manager.SubscribeRequest(subscribe)
+	err := manager.Subscribe([]*naming.SubscribeProvider{&provider})
 	if err != nil {
 		log.Error(err)
 		return
 	}
 
-	req := naming.FetchQry{
-		Env:    req1.Env,
-		AppId:  req1.AppId,
-		Status: req1.Status,
-	}
-	rs, err := manager.Fetch(req)
+	rs, err := manager.GetInstance("core-provider")
 	if err != nil {
 		log.Error(err)
 		return
 	}
-	for _, instance := range rs.Instances {
+	for _, instance := range rs {
 		log.Info(fmt.Sprintf("appid:%s,env:%s,hostname:%s,addrs:%s\n",
 			instance.AppId,
 			instance.Env,
@@ -74,6 +64,17 @@ func main() {
 	}
 	fmt.Println("config name=" + conf.Name)
 
+	graceShutdown(func(ctx context.Context) {
+		err = manager.Shutdown()
+		if err != nil {
+			fmt.Println(err)
+		}
+		ctx.Done()
+	})
+
+}
+
+func graceShutdown(callback func(context.Context)) {
 	// 等待中断信号来优雅地关闭服务器，为关闭服务器操作设置一个5秒的超时
 	quit := make(chan os.Signal, 1) // 创建一个接收信号的通道
 	// kill 默认会发送 syscall.SIGTERM 信号
@@ -87,23 +88,12 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	cancelReq := naming.CancelCmd{
-		AppId:           req1.AppId,
-		Env:             req1.Env,
-		InstanceId:      req1.InstanceId,
-		LatestTimestamp: time.Now().UnixNano(),
-	}
-	manager.CancelRequest(cancelReq)
-
-	configManager.Shutdown()
+	go callback(ctx)
 
 	select {
 	case <-ctx.Done():
 		log.Warn("timeout of 10 seconds")
 	}
-	log.Info("server exiting")
 
-	//time.Sleep(5 * time.Minute)
-	fmt.Println("refreshed config name=" + conf.Name)
-	configManager.Shutdown()
+	log.Info("shutdown finished!")
 }

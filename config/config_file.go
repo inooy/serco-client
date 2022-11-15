@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func FromFile(m *Manager) {
+func (m *Manager) FromFile() {
 	//realPath, _ := filepath.Abs("./")
 	// realPath := getCurrentDir()
 	///configFilePath := realPath + "/" + env + "/"

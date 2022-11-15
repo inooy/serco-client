@@ -2,20 +2,60 @@ package config
 
 import (
 	"bytes"
-	"github.com/inooy/serco-client/config/remote"
+	"errors"
+	"fmt"
+	"github.com/inooy/serco-client/core"
 	"github.com/inooy/serco-client/pkg/log"
-	"github.com/inooy/serco-client/pkg/socket/connection"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
 	"time"
 )
 
-func FromServer(m *Manager) {
-	log.Info("从配置中心获取配置信息")
+type MetadataChangeEvent struct {
+	AppName  string    `json:"appName" mapstructure:"appName"`
+	EnvType  string    `json:"envType" mapstructure:"envType"`
+	Metadata *Metadata `json:"metadata"`
+}
 
-	m.Client = remote.NewConfigSocketClient(connection.TcpSocketConnectOpts{
-		Host: m.Options.RemoteAddr,
-	}, m)
+type CheckRequest struct {
+	AppName string         `json:"appName" mapstructure:"appName"`
+	EnvType string         `json:"envType" mapstructure:"envType"`
+	Old     map[string]int `json:"old" mapstructure:"old"`
+}
+
+func (m *Manager) FromServer() {
+	log.Info("从配置中心获取配置信息")
+	m.Client.On(core.NamespaceConfig, func(dto *core.EventDTO) {
+		var data MetadataChangeEvent
+		//将 map 转换为指定的结构体
+		if err := mapstructure.Decode(dto.Data, &data); err != nil {
+			fmt.Println(err)
+		}
+		m.OnFileChange(data.Metadata)
+	})
+	m.Client.OnReconnected(func(isReconnect bool) error {
+		if !isReconnect {
+			return nil
+		}
+		log.Info("reconnect success, start re login...")
+		result, err := m.Client.Login(m.Options.AppName, m.Options.Env, 6000)
+		if err != nil {
+			return err
+		}
+		if result.Code != 200 {
+			return errors.New(result.Msg)
+		}
+		log.Info("re login success!")
+		var list []Metadata
+		//将 map 转换为指定的结构体
+		if err = mapstructure.Decode(result.Data, &list); err != nil {
+			return err
+		}
+		for i := range list {
+			m.OnFileChange(&list[i])
+		}
+		return nil
+	})
 	result, err := m.Client.Launch(m.Options.AppName, m.Options.Env, 6000)
 	if err != nil {
 		panic(err)
@@ -24,7 +64,7 @@ func FromServer(m *Manager) {
 	if result.Code != 200 {
 		panic(result.Msg)
 	}
-	var list []remote.Metadata
+	var list []Metadata
 	//将 map 转换为指定的结构体
 	if err = mapstructure.Decode(result.Data, &list); err != nil {
 		panic("配置中心无配置env=" + m.Options.Env + "appName=" + m.Options.AppName + ",server=" + m.Options.RemoteAddr)
@@ -71,7 +111,7 @@ func startPoll(m *Manager) {
 		for s := range m.MetadataList {
 			old[m.MetadataList[s].FileId] = m.MetadataList[s].Version
 		}
-		req := remote.CheckRequest{
+		req := CheckRequest{
 			AppName: m.Options.AppName,
 			EnvType: m.Options.Env,
 			Old:     old,
@@ -85,7 +125,7 @@ func startPoll(m *Manager) {
 			log.Errorf("config center poll fail: code=%d ,msg=%s", result.Code, result.Msg)
 			continue
 		}
-		var list []remote.Metadata
+		var list []Metadata
 		//将 map 转换为指定的结构体
 		if err = mapstructure.Decode(result.Data, &list); err != nil {
 			log.Error("config center polled result error env="+m.Options.Env+"appName="+m.Options.AppName+",server="+m.Options.RemoteAddr, err.Error())

@@ -16,7 +16,7 @@ func main() {
 	conf := CustomConfig{}
 	// 构造配置管理器
 	configManager := config.NewManager(config.Options{
-		AppName:      "serco-demo",
+		AppName:      "core-demo",
 		Env:          "dev",
 		RemoteAddr:   "127.0.0.1:9011",
 		PollInterval: 300000,

@@ -1,7 +1,6 @@
 package config
 
 import (
-	"github.com/inooy/serco-client/config/remote"
 	"github.com/inooy/serco-client/pkg/log"
 	"gopkg.in/yaml.v3"
 	"reflect"
@@ -26,7 +25,7 @@ type PropChangeEvent struct {
 type PropChangeListener interface {
 }
 
-func calcChange(old *remote.Metadata, current *remote.Metadata) ([]*PropChangeEvent, error) {
+func calcChange(old *Metadata, current *Metadata) ([]*PropChangeEvent, error) {
 	// 对比两个yaml/properties/json 格式的配置
 	// 这里可以拿到原始的字符串
 	// 解析为map，对比map差异？

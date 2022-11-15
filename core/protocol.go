@@ -1,4 +1,4 @@
-package remote
+package core
 
 import (
 	"bytes"
@@ -23,7 +23,7 @@ const HeadMetadataLen int = 7
 const ProtocolVersion byte = 1
 const Magic = byte('v')
 
-type SercoCodec struct {
+type Codec struct {
 }
 
 func deserializeFrame(cmd model.Command, buffer []byte) (model.Frame, error) {
@@ -43,7 +43,7 @@ func deserializeFrame(cmd model.Command, buffer []byte) (model.Frame, error) {
 	}
 }
 
-func (codec *SercoCodec) Decode(buffer []byte) ([]model.Frame, []byte) {
+func (codec *Codec) Decode(buffer []byte) ([]model.Frame, []byte) {
 	var frames = make([]model.Frame, 0)
 	offset := 0
 	for {
@@ -87,7 +87,7 @@ func (codec *SercoCodec) Decode(buffer []byte) ([]model.Frame, []byte) {
 	return frames, buffer[offset:]
 }
 
-func (codec *SercoCodec) Encode(frame model.Frame) (bf *bytes.Buffer, err error) {
+func (codec *Codec) Encode(frame model.Frame) (bf *bytes.Buffer, err error) {
 	var cmd model.Command
 	var framebuffer *bytes.Buffer
 	bf = new(bytes.Buffer)

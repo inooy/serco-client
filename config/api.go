@@ -1,4 +1,4 @@
-package remote
+package config
 
 type Metadata struct {
 	Id         int    `json:"id"`
@@ -12,6 +12,6 @@ type Metadata struct {
 	Version    int    `json:"version"`
 }
 
-type ConfigFileListener interface {
+type FileListener interface {
 	OnFileChange(metadata *Metadata)
 }

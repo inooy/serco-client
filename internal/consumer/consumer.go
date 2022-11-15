@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/inooy/serco-client/config"
-	"github.com/inooy/serco-client/config/remote"
+	"github.com/inooy/serco-client/core"
 	"github.com/inooy/serco-client/naming"
 	"github.com/inooy/serco-client/pkg/log"
 	"os"
@@ -23,33 +23,33 @@ func main() {
 	conf := CustomConfig{}
 	// 构造配置管理器
 	configManager := config.NewManager(config.Options{
-		AppName:      "serco-demo",
+		AppName:      "core-demo",
 		Env:          "dev",
 		RemoteAddr:   "127.0.0.1:9011",
 		PollInterval: 120000,
 	}, &conf)
 	configManager.InitConfig()
 
-	var req1 = naming.RegisterCmd{AppId: "serco-provider", Env: "dev", InstanceId: "serco.provider", Addrs: []string{"http://1.1.1.1/testapp"}, Status: 1}
+	var req1 = naming.RegisterCmd{AppId: "core-provider", Env: "dev", InstanceId: "core.provider", Addrs: []string{"http://1.1.1.1/testapp"}, Status: 1}
 
 	manager := naming.ServiceManager{Client: configManager.Client}
 
-	// AppId: "serco-provider", Env: "dev", Hostname: "serco.provider",
-	manager.Client.EventEmitter.On("serco-provider", func(dto *remote.EventDTO) {
+	// AppId: "core-provider", Env: "dev", Hostname: "core.provider",
+	manager.Client.On(core.NamespaceDiscovery, func(dto *core.EventDTO) {
 		log.Infof("收到事件%+v", dto)
 	})
 
 	provider := naming.SubscribeProvider{
 		Protocol: "http",
-		Provider: "serco-provider",
+		Provider: "core-provider",
 	}
 	subscribe := naming.SubscribeCmd{
-		InstanceId: "serco-consumer1",
+		InstanceId: "core-consumer1",
 		Subscribes: []naming.SubscribeProvider{provider},
 	}
 
 	// 订阅服务
-	err := manager.Subscribe(subscribe)
+	err := manager.SubscribeRequest(subscribe)
 	if err != nil {
 		log.Error(err)
 		return
@@ -93,7 +93,7 @@ func main() {
 		InstanceId:      req1.InstanceId,
 		LatestTimestamp: time.Now().UnixNano(),
 	}
-	manager.Cancel(cancelReq)
+	manager.CancelRequest(cancelReq)
 
 	configManager.Shutdown()
 

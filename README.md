@@ -7,7 +7,8 @@
 # 🎊 TODO List 
 1. [x] 提供shutdown接口
 2. [x] 补充使用文档
-3. [ ] 提供日志接口封装
+3. [ ] 配置变更改用event监听
+4. [ ] 提供日志接口封装
 
 # 🎯 RoadMap
 1. [x] 心跳检测与断线重连
@@ -20,12 +21,12 @@
 # 💯 使用 
 ## 引入依赖：
 ```shell
-go get github.com/inooy/serco-client
+go get github.com/inooy/core-client
 ```
 
 ## 更新依赖
 ```shell
-go get github.com/inooy/serco-client@v0.1.1
+go get github.com/inooy/core-client@v0.1.1
 ```
 
 ## 编程使用
@@ -50,7 +51,7 @@ func main() {
 	conf := CustomConfig{}
 	// 构造配置管理器
 	configManager := config.NewManager(config.Options{
-		AppName:      "serco-demo",
+		AppName:      "core-demo",
 		Env:          "dev",
 		RemoteAddr:   "127.0.0.1:9011",
 		PollInterval: 300000,

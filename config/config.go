@@ -2,7 +2,7 @@ package config
 
 import (
 	"bytes"
-	"github.com/inooy/serco-client/config/remote"
+	"github.com/inooy/serco-client/core"
 	"github.com/inooy/serco-client/pkg/log"
 	"github.com/spf13/viper"
 	"strings"
@@ -35,27 +35,28 @@ const (
 )
 
 type Manager struct {
-	Options      Options
+	Options      *Options
 	Bean         interface{}
 	emitter      PropEventEmitter
-	MetadataList map[string]*remote.Metadata
+	MetadataList map[string]*Metadata
 	Status       Status
-	Client       *remote.SercoSocketClient
+	Client       *core.SocketClientImpl
 }
 
-func NewManager(options Options, bean interface{}) *Manager {
+func NewManager(options *Options, bean interface{}, client *core.SocketClientImpl) *Manager {
 	return &Manager{
 		Status:       NotInit,
-		MetadataList: map[string]*remote.Metadata{},
+		MetadataList: map[string]*Metadata{},
 		emitter: PropEventEmitter{
 			callbacks: make(map[string]func([]*PropChangeEvent)),
 		},
 		Options: options,
+		Client:  client,
 		Bean:    bean,
 	}
 }
 
-func (m *Manager) OnFileChange(metadata *remote.Metadata) {
+func (m *Manager) OnFileChange(metadata *Metadata) {
 	m.UpdateConfigBean(metadata)
 	events, err := calcChange(m.MetadataList[metadata.FileId], metadata)
 	if err != nil {
@@ -66,7 +67,7 @@ func (m *Manager) OnFileChange(metadata *remote.Metadata) {
 	m.MetadataList[metadata.FileId] = metadata
 }
 
-func (m *Manager) UpdateConfigBean(metadata *remote.Metadata) {
+func (m *Manager) UpdateConfigBean(metadata *Metadata) {
 	log.Info("准备更新配置")
 	con := viper.New()
 	con.SetConfigType("yaml")
@@ -108,9 +109,9 @@ func (m *Manager) InitConfig() {
 	once.Do(func() {
 		m.Status = Starting
 		if m.Options.RemoteAddr == "" {
-			FromFile(m)
+			m.FromFile()
 		} else {
-			FromServer(m)
+			m.FromServer()
 		}
 		m.Status = Started
 	})

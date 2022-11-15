@@ -5,7 +5,18 @@ import (
 	"github.com/inooy/serco-client/pkg/log"
 )
 
-func (m *ServiceManager) Registry(req RegisterCmd) error {
+func (m *ServiceManager) Registry() error {
+	var req = RegisterCmd{
+		AppId:      m.AppId,
+		Env:        m.Env,
+		InstanceId: m.InstanceId,
+		Addrs:      []string{"http://1.1.1.1"},
+		Status:     1,
+	}
+	return m.RegistryRequest(req)
+}
+
+func (m *ServiceManager) RegistryRequest(req RegisterCmd) error {
 	result, err := m.Client.RequestTcp("/api/naming/registry", req, 3000)
 	if err != nil {
 		return err
@@ -18,7 +29,7 @@ func (m *ServiceManager) Registry(req RegisterCmd) error {
 	return nil
 }
 
-func (m *ServiceManager) Subscribe(req SubscribeCmd) error {
+func (m *ServiceManager) SubscribeRequest(req SubscribeCmd) error {
 	result, err := m.Client.RequestTcp("/api/naming/subscribe", req, 3000)
 	if err != nil {
 		return err
@@ -31,7 +42,7 @@ func (m *ServiceManager) Subscribe(req SubscribeCmd) error {
 	return nil
 }
 
-func (m *ServiceManager) Cancel(req CancelCmd) error {
+func (m *ServiceManager) CancelRequest(req CancelCmd) error {
 	result, err := m.Client.RequestTcp("/api/naming/cancel", req, 3000)
 	if err != nil {
 		return err

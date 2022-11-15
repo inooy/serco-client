@@ -21,7 +21,7 @@ func main() {
 	conf := CustomConfig{}
 	// 构造配置管理器
 	configManager := config.NewManager(config.Options{
-		AppName:      "serco-consumer",
+		AppName:      "core-consumer",
 		Env:          "dev",
 		RemoteAddr:   "127.0.0.1:9011",
 		PollInterval: 300000,
@@ -29,12 +29,12 @@ func main() {
 	configManager.InitConfig()
 	// 监听配置修改
 
-	m := naming.ServiceManager{Client: configManager.Client}
+	m := naming.NewNamingService("core-consumer", "dev", configManager.Client)
 
-	var req1 = naming.RegisterCmd{AppId: "serco-provider", Env: "dev", InstanceId: "serco-provider", Addrs: []string{"http://1.1.1.1/testapp"}, Status: 1}
+	var req1 = naming.RegisterCmd{AppId: "core-provider", Env: "dev", InstanceId: "core-provider", Addrs: []string{"http://1.1.1.1/testapp"}, Status: 1}
 	//var req2 = &naming.RegisterCmd{AppId: "com.xx.testapp", Env: "test", Hostname: "myhost2", Addrs: []string{"http://2.2.2.2/testapp"}, Status: 1}
 
-	m.Registry(req1)
+	m.RegistryRequest(req1)
 
 	fmt.Println("config name=" + conf.Name)
 
@@ -57,7 +57,7 @@ func main() {
 		InstanceId:      req1.InstanceId,
 		LatestTimestamp: time.Now().UnixNano(),
 	}
-	m.Cancel(cancelReq)
+	m.CancelRequest(cancelReq)
 
 	configManager.Shutdown()
 

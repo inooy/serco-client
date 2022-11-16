@@ -5,19 +5,16 @@ import (
 )
 
 type ServiceManager struct {
-	AppId      string
-	Env        string
-	InstanceId string
-	Options    *Options
-	Client     *core.SocketClientImpl
-	App        map[string]*Instance
-	Providers  []*SubscribeProvider
+	Options   *Options
+	Client    *core.SocketClientImpl
+	App       map[string]*Instance
+	Providers []*SubscribeProvider
 }
 
 // Options config base options
 type Options struct {
 	// config env
-	Env string
+	EnvType string
 	// the appName of at config center
 	AppName string
 	// Configure the center addresses. Multiple addresses are separated by commas(,)
@@ -26,6 +23,9 @@ type Options struct {
 	// This mechanism mainly avoids the loss of change notice
 	PollInterval int
 	InstanceId   string
+	LocalIp      string
+	LocalPort    int
+	Protocol     string
 }
 
 func NewNamingService(options *Options, client *core.SocketClientImpl) *ServiceManager {
@@ -47,7 +47,7 @@ func (m *ServiceManager) GetInstance(appName string) ([]*Instance, error) {
 
 func (m *ServiceManager) Subscribe(providers []*SubscribeProvider) error {
 	subscribe := SubscribeCmd{
-		InstanceId: m.InstanceId,
+		InstanceId: m.Options.InstanceId,
 		Subscribes: providers,
 	}
 

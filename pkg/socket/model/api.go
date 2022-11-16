@@ -37,6 +37,10 @@ type Response struct {
 	Data  interface{} `json:"data"`
 }
 
+func (r *Response) IsSuccess() bool {
+	return r.Code == 200
+}
+
 type ResponseDTO struct {
 	Header CommonHeader `json:"header"`
 	Body   Response     `json:"body"`

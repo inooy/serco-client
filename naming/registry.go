@@ -3,26 +3,60 @@ package naming
 import (
 	"errors"
 	"github.com/inooy/serco-client/pkg/log"
+	"net"
+	"strconv"
+	"strings"
 	"time"
 )
 
+// GetIpAddr 获取本地IP地址 （问题：不能确保获取的ip的正确性）
+func GetIpAddr() string {
+	result := "127.0.0.1"
+	addrArr, err := net.InterfaceAddrs()
+	if err != nil {
+		return result
+	}
+
+	for _, address := range addrArr {
+		// 检查ip地址判断是否回环地址
+		if ipNet, ok := address.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
+			if cur := ipNet.IP.To4(); cur != nil {
+				result = ipNet.IP.String()
+				if strings.HasPrefix(result, "172") {
+					return result
+				}
+			}
+		}
+	}
+	return result
+}
+
+func buildAddr(protocol string, ip string, port int) string {
+	return protocol + "://" + ip + ":" + strconv.Itoa(port)
+}
+
 func (m *ServiceManager) Registry() error {
+	addr := ""
+	if m.Options.LocalIp == "" {
+		addr = buildAddr(m.Options.Protocol, GetIpAddr(), m.Options.LocalPort)
+	} else {
+		addr = buildAddr(m.Options.Protocol, m.Options.LocalIp, m.Options.LocalPort)
+	}
 	var req = RegisterCmd{
-		AppId:      m.AppId,
-		Env:        m.Env,
-		InstanceId: m.InstanceId,
-		// todo 支持扩展
-		Addrs:  []string{"http://1.1.1.1"},
-		Status: 1,
+		AppId:      m.Options.AppName,
+		Env:        m.Options.EnvType,
+		InstanceId: m.Options.InstanceId,
+		Addrs:      []string{addr},
+		Status:     1,
 	}
 	return m.RegistryRequest(req)
 }
 
 func (m *ServiceManager) Cancel() error {
 	var req = CancelCmd{
-		AppId:           m.AppId,
-		Env:             m.Env,
-		InstanceId:      m.InstanceId,
+		AppId:           m.Options.AppName,
+		Env:             m.Options.EnvType,
+		InstanceId:      m.Options.InstanceId,
 		LatestTimestamp: time.Now().UnixNano() / 1e6,
 		Replication:     false,
 	}

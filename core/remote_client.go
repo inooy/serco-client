@@ -27,8 +27,22 @@ type EventDTO struct {
 	Data      interface{} `json:"data"`      // 事件数据
 }
 
+// Options config base options
+type Options struct {
+	// config env
+	Env string
+	// the appName of at config center
+	AppName string
+	// Configure the center addresses. Multiple addresses are separated by commas(,)
+	RemoteAddr string
+	// Configure polling interval in milliseconds.
+	// This mechanism mainly avoids the loss of change notice
+	PollInterval int
+}
+
 type SocketClientImpl struct {
 	*client.Template
+	Options             *Options
 	loginCallback       func(*model.Response)
 	reconnectedCallback []func(isReconnect bool) error
 	heartBeatFrame      *model.HeartbeatFrame
@@ -65,14 +79,15 @@ func (s *SocketClientImpl) Emit(namespace string, dto *EventDTO) {
 	}
 }
 
-func NewConfigSocketClient(options connection.TcpSocketConnectOpts) *SocketClientImpl {
+func NewConfigSocketClient(options *Options) *SocketClientImpl {
 	impl := &SocketClientImpl{
+		Options: options,
 		emitter: EventEmitter{
 			callbacks: make(map[string]func(*EventDTO)),
 		},
 		reconnectedCallback: make([]func(isReconnected bool) error, 0),
 	}
-	conn := connection.NewTcpConnection(options, &Codec{})
+	conn := connection.NewTcpConnection(connection.TcpOpts{Host: options.RemoteAddr}, &Codec{})
 	template := client.NewTemplate(impl, conn)
 	impl.Template = template
 	conn.AddListener(connection.Listener{
@@ -82,6 +97,21 @@ func NewConfigSocketClient(options connection.TcpSocketConnectOpts) *SocketClien
 		OnStatusChange: func(status connection.Status) {
 			// 非启动时重连，那么重新登录
 			if status == connection.CONNECTED {
+
+				if !impl.starting {
+					log.Info("reconnect success, start re login...")
+					result, err := impl.Login(impl.Options.AppName, impl.Options.Env, 6000)
+					if err != nil {
+						_ = impl.Close(err)
+						return
+					}
+					if result.Code != 200 {
+						_ = impl.Close(nil)
+						return
+					}
+					log.Info("re login success!")
+				}
+
 				for i := range impl.reconnectedCallback {
 					err := impl.reconnectedCallback[i](!impl.starting)
 					if err != nil {
@@ -181,15 +211,23 @@ func (s *SocketClientImpl) Login(appName string, envType string, timeout int) (*
 	}
 }
 
-func (s *SocketClientImpl) Launch(appName string, envType string, timeout int) (*model.Response, error) {
+func (s *SocketClientImpl) Launch() error {
 	s.starting = true
+	defer func() {
+		s.starting = false
+	}()
 	s.Mount()
 	if err := s.Connect(); err != nil {
-		return nil, err
+		return err
 	}
-	res, err := s.Login(appName, envType, timeout)
-	s.starting = false
-	return res, err
+	res, err := s.Login(s.Options.AppName, s.Options.Env, 3000)
+	if err != nil {
+		return err
+	}
+	if res.IsSuccess() {
+		return nil
+	}
+	return errors.New(res.Msg)
 }
 
 func (s *SocketClientImpl) Shutdown() error {

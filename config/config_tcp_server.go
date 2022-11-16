@@ -23,6 +23,12 @@ type CheckRequest struct {
 	Old     map[string]int `json:"old" mapstructure:"old"`
 }
 
+type SubscribeRequest struct {
+	AppName    string `json:"appName" mapstructure:"appName"`
+	EnvType    string `json:"envType" mapstructure:"envType"`
+	InstanceId string `json:"instanceId" mapstructure:"instanceId"`
+}
+
 func (m *Manager) FromServer() {
 	log.Info("从配置中心获取配置信息")
 	m.Client.On(core.NamespaceConfig, func(dto *core.EventDTO) {
@@ -38,17 +44,8 @@ func (m *Manager) FromServer() {
 			return nil
 		}
 		log.Info("reconnect success, start re login...")
-		result, err := m.Client.Login(m.Options.AppName, m.Options.Env, 6000)
+		list, err := m.subscribe()
 		if err != nil {
-			return err
-		}
-		if result.Code != 200 {
-			return errors.New(result.Msg)
-		}
-		log.Info("re login success!")
-		var list []Metadata
-		//将 map 转换为指定的结构体
-		if err = mapstructure.Decode(result.Data, &list); err != nil {
 			return err
 		}
 		for i := range list {
@@ -56,18 +53,10 @@ func (m *Manager) FromServer() {
 		}
 		return nil
 	})
-	result, err := m.Client.Launch(m.Options.AppName, m.Options.Env, 6000)
+	list, err := m.subscribe()
+
 	if err != nil {
 		panic(err)
-	}
-	log.Info(result)
-	if result.Code != 200 {
-		panic(result.Msg)
-	}
-	var list []Metadata
-	//将 map 转换为指定的结构体
-	if err = mapstructure.Decode(result.Data, &list); err != nil {
-		panic("配置中心无配置env=" + m.Options.Env + "appName=" + m.Options.AppName + ",server=" + m.Options.RemoteAddr)
 	}
 
 	if len(list) == 0 {
@@ -90,6 +79,26 @@ func (m *Manager) FromServer() {
 		}
 	}
 	go startPoll(m)
+}
+
+func (m *Manager) subscribe() ([]Metadata, error) {
+	req := SubscribeRequest{
+		AppName: m.Options.AppName,
+		EnvType: m.Options.Env,
+	}
+	result, err := m.Client.RequestTcp("/api/config/subscribe", req, 3000)
+	if err != nil {
+		return nil, err
+	}
+	if result.Code != 200 {
+		return nil, errors.New(fmt.Sprintf("config center poll fail: code=%d ,msg=%s", result.Code, result.Msg))
+	}
+	var list []Metadata
+	//将 map 转换为指定的结构体
+	if err = mapstructure.Decode(result.Data, &list); err != nil {
+		return nil, errors.New("配置中心无配置env=" + m.Options.Env + "appName=" + m.Options.AppName + ",server=" + m.Options.RemoteAddr)
+	}
+	return list, nil
 }
 
 func startPoll(m *Manager) {

@@ -4,14 +4,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/inooy/serco-client/core"
+	"github.com/inooy/serco-client/internal/common"
 	"github.com/inooy/serco-client/naming"
 	"github.com/inooy/serco-client/pkg/log"
 	"github.com/inooy/serco-client/serco"
-	"os"
-	"os/signal"
 	"strings"
-	"syscall"
-	"time"
 )
 
 type CustomConfig struct {
@@ -21,23 +18,21 @@ type CustomConfig struct {
 func main() {
 	// 配置bean，配置信息会绑定到bean中，配置刷新时，bean属性会一起刷新
 	conf := CustomConfig{}
-
 	manager := serco.NewSerco(serco.Options{
-		AppName:         "core-demo",
-		Env:             "dev",
-		RemoteAddr:      "127.0.0.1:9011",
-		PollInterval:    120000,
-		RegistryEnabled: true,
-		ConfigEnabled:   false,
-		InstanceId:      "",
+		AppName:      "serco-consumer",
+		Env:          "dev",
+		RemoteAddr:   "127.0.0.1:9011",
+		PollInterval: 120000,
+		InstanceId:   "",
 	})
 	manager.SetupConfig(&conf)
 
-	// AppId: "core-provider", Env: "dev", Hostname: "core.provider",
+	// AppId: "core-provider", EnvType: "dev", Hostname: "core.provider",
 	manager.Client.On(core.NamespaceDiscovery, func(dto *core.EventDTO) {
 		log.Infof("收到事件%+v", dto)
 	})
 
+	manager.SetupDiscovery(serco.RegistryOpts{})
 	provider := naming.SubscribeProvider{
 		Protocol: "http",
 		Provider: "core-provider",
@@ -64,36 +59,11 @@ func main() {
 	}
 	fmt.Println("config name=" + conf.Name)
 
-	graceShutdown(func(ctx context.Context) {
+	common.GraceShutdown(func(ctx context.Context) {
 		err = manager.Shutdown()
 		if err != nil {
 			fmt.Println(err)
 		}
 		ctx.Done()
 	})
-
-}
-
-func graceShutdown(callback func(context.Context)) {
-	// 等待中断信号来优雅地关闭服务器，为关闭服务器操作设置一个5秒的超时
-	quit := make(chan os.Signal, 1) // 创建一个接收信号的通道
-	// kill 默认会发送 syscall.SIGTERM 信号
-	// kill -2 发送 syscall.SIGINT 信号，我们常用的Ctrl+C就是触发系统SIGINT信号
-	// kill -9 发送 syscall.SIGKILL 信号，但是不能被捕获，所以不需要添加它
-	// signal.Notify把收到的 syscall.SIGINT或syscall.SIGTERM 信号转发给quit
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT) // 此处不会阻塞
-	<-quit                                                                                // 阻塞在此，当接收到上述两种信号时才会往下执行
-	log.Info("Shutdown Server ...")
-	// 创建一个5秒超时的context
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	go callback(ctx)
-
-	select {
-	case <-ctx.Done():
-		log.Warn("timeout of 10 seconds")
-	}
-
-	log.Info("shutdown finished!")
 }

@@ -6,16 +6,16 @@ import (
 	"net"
 )
 
-type TcpSocketConnectOpts struct {
+type TcpOpts struct {
 	Host string `json:"host"`
 }
 
 type TcpConnection struct {
 	*template
-	options TcpSocketConnectOpts
+	options TcpOpts
 }
 
-func NewTcpConnection(options TcpSocketConnectOpts, codecImpl codec.Codec) SocketConnection {
+func NewTcpConnection(options TcpOpts, codecImpl codec.Codec) SocketConnection {
 	impl := &TcpConnection{
 		options: options,
 	}

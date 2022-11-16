@@ -4,7 +4,6 @@ import (
 	"github.com/inooy/serco-client/config"
 	"github.com/inooy/serco-client/core"
 	"github.com/inooy/serco-client/naming"
-	"github.com/inooy/serco-client/pkg/socket/connection"
 	"github.com/inooy/serco-client/pkg/tools"
 	"sync"
 )
@@ -20,11 +19,13 @@ type Options struct {
 	// Configure polling interval in milliseconds.
 	// This mechanism mainly avoids the loss of change notice
 	PollInterval int
-	// use registry center
-	RegistryEnabled bool
-	// use config center
-	ConfigEnabled bool
-	InstanceId    string
+	InstanceId   string
+}
+
+type RegistryOpts struct {
+	LocalIp   string
+	LocalPort int
+	Protocol  string
 }
 
 type Serco struct {
@@ -43,10 +44,16 @@ func NewSerco(options Options) *Serco {
 		Options: &options,
 	}
 
-	instance.Client = core.NewConfigSocketClient(connection.TcpSocketConnectOpts{
-		Host: options.RemoteAddr,
+	instance.Client = core.NewConfigSocketClient(&core.Options{
+		Env:        options.Env,
+		AppName:    options.AppName,
+		RemoteAddr: options.RemoteAddr,
 	})
 
+	err := instance.Client.Launch()
+	if err != nil {
+		panic(err)
+	}
 	return instance
 }
 
@@ -60,14 +67,23 @@ func (s *Serco) SetupConfig(bean interface{}) {
 	s.configManager.InitConfig()
 }
 
-func (s *Serco) Registry() error {
+func (s *Serco) SetupDiscovery(opt RegistryOpts) {
+	if opt.Protocol == "" {
+		opt.Protocol = "http"
+	}
 	s.serviceManager = naming.NewNamingService(&naming.Options{
-		Env:          s.Options.Env,
+		EnvType:      s.Options.Env,
 		AppName:      s.Options.AppName,
 		RemoteAddr:   s.Options.RemoteAddr,
 		PollInterval: s.Options.PollInterval,
 		InstanceId:   s.Options.InstanceId,
+		LocalIp:      opt.LocalIp,
+		LocalPort:    opt.LocalPort,
+		Protocol:     opt.Protocol,
 	}, s.Client)
+}
+
+func (s *Serco) Registry() error {
 	return s.serviceManager.Registry()
 }
 

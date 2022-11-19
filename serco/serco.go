@@ -44,16 +44,19 @@ func NewSerco(options Options) *Serco {
 		Options: &options,
 	}
 
-	instance.Client = core.NewConfigSocketClient(&core.Options{
-		Env:        options.Env,
-		AppName:    options.AppName,
-		RemoteAddr: options.RemoteAddr,
-	})
+	if options.RemoteAddr != "" {
+		instance.Client = core.NewConfigSocketClient(&core.Options{
+			Env:        options.Env,
+			AppName:    options.AppName,
+			RemoteAddr: options.RemoteAddr,
+		})
 
-	err := instance.Client.Launch()
-	if err != nil {
-		panic(err)
+		err := instance.Client.Launch()
+		if err != nil {
+			panic(err)
+		}
 	}
+
 	return instance
 }
 

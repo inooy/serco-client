@@ -32,8 +32,8 @@ type Serco struct {
 	once           sync.Once
 	Options        *Options
 	Client         *core.SocketClientImpl
-	configManager  *config.Manager
-	serviceManager *naming.ServiceManager
+	ConfigManager  *config.Manager
+	ServiceManager *naming.ServiceManager
 }
 
 func NewSerco(options Options) *Serco {
@@ -58,20 +58,20 @@ func NewSerco(options Options) *Serco {
 }
 
 func (s *Serco) SetupConfig(bean interface{}) {
-	s.configManager = config.NewManager(&config.Options{
+	s.ConfigManager = config.NewManager(&config.Options{
 		Env:          s.Options.Env,
 		AppName:      s.Options.AppName,
 		RemoteAddr:   s.Options.RemoteAddr,
 		PollInterval: s.Options.PollInterval,
 	}, bean, s.Client)
-	s.configManager.InitConfig()
+	s.ConfigManager.InitConfig()
 }
 
 func (s *Serco) SetupDiscovery(opt RegistryOpts) {
 	if opt.Protocol == "" {
 		opt.Protocol = "http"
 	}
-	s.serviceManager = naming.NewNamingService(&naming.Options{
+	s.ServiceManager = naming.NewNamingService(&naming.Options{
 		EnvType:      s.Options.Env,
 		AppName:      s.Options.AppName,
 		RemoteAddr:   s.Options.RemoteAddr,
@@ -84,23 +84,23 @@ func (s *Serco) SetupDiscovery(opt RegistryOpts) {
 }
 
 func (s *Serco) Registry() error {
-	return s.serviceManager.Registry()
+	return s.ServiceManager.Registry()
 }
 
 func (s *Serco) GetInstance(appName string) ([]*naming.Instance, error) {
-	return s.serviceManager.GetInstance(appName)
+	return s.ServiceManager.GetInstance(appName)
 }
 
 func (s *Serco) Subscribe(providers []*naming.SubscribeProvider) error {
-	return s.serviceManager.Subscribe(providers)
+	return s.ServiceManager.Subscribe(providers)
 }
 
 func (s *Serco) Shutdown() error {
-	if s.configManager != nil {
-		s.configManager.Shutdown()
+	if s.ConfigManager != nil {
+		s.ConfigManager.Shutdown()
 	}
-	if s.serviceManager != nil {
-		err := s.serviceManager.Shutdown()
+	if s.ServiceManager != nil {
+		err := s.ServiceManager.Shutdown()
 		if err != nil {
 			return err
 		}

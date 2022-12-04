@@ -30,15 +30,13 @@ go get github.com/inooy/core-client@v0.1.1
 ```
 
 ## 编程使用
-
+### 配置中心使用
 ```go
-
-package main
-
 import (
 	"fmt"
 	"github.com/inooy/serco-client/config"
 	"github.com/inooy/serco-client/pkg/log"
+	"github.com/inooy/serco-client/serco"
 	"time"
 )
 
@@ -49,16 +47,17 @@ type CustomConfig struct {
 func main() {
 	// 配置bean，配置信息会绑定到bean中，配置刷新时，bean属性会一起刷新
 	conf := CustomConfig{}
-	// 构造配置管理器
-	configManager := config.NewManager(config.Options{
+
+	Serco := serco.NewSerco(serco.Options{
 		AppName:      "core-demo",
 		Env:          "dev",
 		RemoteAddr:   "127.0.0.1:9011",
-		PollInterval: 300000,
-	}, &conf)
-	configManager.InitConfig()
+		PollInterval: 120000,
+		InstanceId:   "",
+	})
+	Serco.SetupConfig(&conf)
 	// 监听配置修改
-	configManager.On("app.name", func(events []*config.PropChangeEvent) {
+	Serco.ConfigManager.On("app.name", func(events []*config.PropChangeEvent) {
 		log.Infof("监听到配置属性更新, key=app.name, list len=%d", len(events))
 		for i := range events {
 			log.Infof("配置change event: %+v", events[i])
@@ -67,8 +66,127 @@ func main() {
 	fmt.Println("config name=" + conf.Name)
 	time.Sleep(5 * time.Minute)
 	fmt.Println("refreshed config name=" + conf.Name)
+	// 优雅关闭
+	err := Serco.Shutdown()
+	if err != nil {
+		fmt.Println(err.Error())
+		return 
+	}
+}
+```
+
+### 注册中心使用
+
+provider:
+
+```go
+
+import (
+	"context"
+	"fmt"
+	"github.com/inooy/serco-client/internal/common"
+	"github.com/inooy/serco-client/serco"
+)
+
+func main() {
+	// 构造配置管理器
+	manager := serco.NewSerco(serco.Options{
+		AppName:      "core-provider",
+		Env:          "dev",
+		RemoteAddr:   "127.0.0.1:9011",
+		PollInterval: 300000,
+		InstanceId:   "",
+	})
+	manager.SetupDiscovery(serco.RegistryOpts{
+		LocalIp:   "",
+		LocalPort: 9090,
+		Protocol:  "http",
+	})
+
+	err := manager.Registry()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("config name=" + manager.Options.AppName)
+	common.GraceShutdown(func(ctx context.Context) {
+		err = manager.Shutdown()
+		if err != nil {
+			fmt.Println(err)
+		}
+	})
 }
 
 ```
 
+consumer:
 
+```go
+import (
+	"context"
+	"fmt"
+	"github.com/inooy/serco-client/core"
+	"github.com/inooy/serco-client/internal/common"
+	"github.com/inooy/serco-client/naming"
+	"github.com/inooy/serco-client/pkg/log"
+	"github.com/inooy/serco-client/serco"
+	"strings"
+)
+
+type CustomConfig struct {
+	Name string `json:"name"`
+}
+
+func main() {
+	// 配置bean，配置信息会绑定到bean中，配置刷新时，bean属性会一起刷新
+	conf := CustomConfig{}
+	manager := serco.NewSerco(serco.Options{
+		AppName:      "serco-consumer",
+		Env:          "dev",
+		RemoteAddr:   "127.0.0.1:9011",
+		PollInterval: 120000,
+		InstanceId:   "",
+	})
+	manager.SetupConfig(&conf)
+
+	// AppId: "core-provider", EnvType: "dev", Hostname: "core.provider",
+	manager.Client.On(core.NamespaceDiscovery, func(dto *core.EventDTO) {
+		log.Infof("收到事件%+v", dto)
+	})
+
+	manager.SetupDiscovery(serco.RegistryOpts{})
+	provider := naming.SubscribeProvider{
+		Protocol: "http",
+		Provider: "core-provider",
+	}
+
+	// 订阅服务
+	err := manager.Subscribe([]*naming.SubscribeProvider{&provider})
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	rs, err := manager.GetInstance("core-provider")
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	for _, instance := range rs {
+		log.Info(fmt.Sprintf("appid:%s,env:%s,hostname:%s,addrs:%s\n",
+			instance.AppId,
+			instance.Env,
+			instance.InstanceId,
+			strings.Join(instance.Addrs, " ")))
+	}
+	fmt.Println("config name=" + conf.Name)
+
+	common.GraceShutdown(func(ctx context.Context) {
+		err = manager.Shutdown()
+		if err != nil {
+			fmt.Println(err)
+		}
+		ctx.Done()
+	})
+}
+```

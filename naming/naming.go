@@ -30,8 +30,9 @@ type Options struct {
 
 func NewNamingService(options *Options, client *core.SocketClientImpl) *ServiceManager {
 	manager := ServiceManager{
-		Client:  client,
-		Options: options,
+		Client:    client,
+		Options:   options,
+		Providers: make([]*SubscribeProvider, 0),
 	}
 	if client == nil {
 		return &manager
@@ -57,6 +58,10 @@ func (m *ServiceManager) Subscribe(providers []*SubscribeProvider) error {
 		Subscribes: providers,
 	}
 
+	for i := range providers {
+		m.Providers = append(m.Providers, providers[i])
+	}
+
 	// 订阅服务
 	return m.SubscribeRequest(subscribe)
 }
@@ -66,5 +71,5 @@ func (m *ServiceManager) Shutdown() error {
 }
 
 func (m *ServiceManager) poll() {
-
+	// 定期拉取服务列表
 }

@@ -26,7 +26,7 @@ go get github.com/inooy/core-client
 
 ## 更新依赖
 ```shell
-go get github.com/inooy/core-client@v0.1.1
+go get github.com/inooy/core-client@v0.4.2
 ```
 
 ## 编程使用

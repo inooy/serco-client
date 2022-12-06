@@ -53,6 +53,9 @@ func (m *ServiceManager) Registry() error {
 }
 
 func (m *ServiceManager) Cancel() error {
+	if m.Client == nil {
+		return nil
+	}
 	var req = CancelCmd{
 		AppId:           m.Options.AppName,
 		Env:             m.Options.EnvType,

@@ -33,6 +33,9 @@ func NewNamingService(options *Options, client *core.SocketClientImpl) *ServiceM
 		Client:  client,
 		Options: options,
 	}
+	if client == nil {
+		return &manager
+	}
 	manager.Client.OnReconnected(func(isReconnect bool) error {
 		// 重连，需要重新注册
 		return manager.Registry()
@@ -46,6 +49,9 @@ func (m *ServiceManager) GetInstance(appName string) ([]*Instance, error) {
 }
 
 func (m *ServiceManager) Subscribe(providers []*SubscribeProvider) error {
+	if m.Client == nil {
+		return nil
+	}
 	subscribe := SubscribeCmd{
 		InstanceId: m.Options.InstanceId,
 		Subscribes: providers,

@@ -4,6 +4,7 @@ import (
 	"github.com/inooy/serco-client/config"
 	"github.com/inooy/serco-client/core"
 	"github.com/inooy/serco-client/naming"
+	"github.com/inooy/serco-client/pkg/log"
 	"github.com/inooy/serco-client/pkg/tools"
 	"sync"
 )
@@ -45,7 +46,7 @@ func NewSerco(options Options) *Serco {
 	}
 
 	if options.RemoteAddr != "" {
-		instance.Client = core.NewConfigSocketClient(&core.Options{
+		instance.Client = core.NewSocketClient(&core.Options{
 			EnvId:      options.EnvId,
 			AppName:    options.AppName,
 			RemoteAddr: options.RemoteAddr,
@@ -87,6 +88,10 @@ func (s *Serco) SetupDiscovery(opt RegistryOpts) {
 }
 
 func (s *Serco) Registry() error {
+	if s.Client == nil {
+		log.Warn("serco client not provide, skip register")
+		return nil
+	}
 	return s.ServiceManager.Registry()
 }
 
@@ -95,6 +100,10 @@ func (s *Serco) GetInstance(appName string) ([]*naming.Instance, error) {
 }
 
 func (s *Serco) Subscribe(providers []*naming.SubscribeProvider) error {
+	if s.Client == nil {
+		log.Warn("serco client not provide, skip subscribe")
+		return nil
+	}
 	return s.ServiceManager.Subscribe(providers)
 }
 

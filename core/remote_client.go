@@ -79,7 +79,7 @@ func (s *SocketClientImpl) Emit(namespace string, dto *EventDTO) {
 	}
 }
 
-func NewConfigSocketClient(options *Options) *SocketClientImpl {
+func NewSocketClient(options *Options) *SocketClientImpl {
 	impl := &SocketClientImpl{
 		Options: options,
 		emitter: EventEmitter{

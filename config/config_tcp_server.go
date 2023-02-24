@@ -13,19 +13,19 @@ import (
 
 type MetadataChangeEvent struct {
 	AppName  string    `json:"appName" mapstructure:"appName"`
-	EnvType  string    `json:"envType" mapstructure:"envType"`
+	EnvId    string    `json:"envId" mapstructure:"envId"`
 	Metadata *Metadata `json:"metadata"`
 }
 
 type CheckRequest struct {
 	AppName string         `json:"appName" mapstructure:"appName"`
-	EnvType string         `json:"envType" mapstructure:"envType"`
+	EnvId   string         `json:"envId" mapstructure:"envId"`
 	Old     map[string]int `json:"old" mapstructure:"old"`
 }
 
 type SubscribeRequest struct {
 	AppName    string `json:"appName" mapstructure:"appName"`
-	EnvType    string `json:"envType" mapstructure:"envType"`
+	EnvId      string `json:"envId" mapstructure:"envId"`
 	InstanceId string `json:"instanceId" mapstructure:"instanceId"`
 }
 
@@ -60,7 +60,7 @@ func (m *Manager) FromServer() {
 	}
 
 	if len(list) == 0 {
-		panic("配置中心无配置env=" + m.Options.Env + "appName=" + m.Options.AppName + ",server=" + m.Options.RemoteAddr)
+		panic("配置中心无配置env=" + m.Options.EnvId + "appName=" + m.Options.AppName + ",server=" + m.Options.RemoteAddr)
 	}
 	con := viper.New()
 	con.SetConfigType("yaml")
@@ -84,7 +84,7 @@ func (m *Manager) FromServer() {
 func (m *Manager) subscribe() ([]Metadata, error) {
 	req := SubscribeRequest{
 		AppName: m.Options.AppName,
-		EnvType: m.Options.Env,
+		EnvId:   m.Options.EnvId,
 	}
 	result, err := m.Client.RequestTcp("/api/config/subscribe", req, 3000)
 	if err != nil {
@@ -96,7 +96,7 @@ func (m *Manager) subscribe() ([]Metadata, error) {
 	var list []Metadata
 	//将 map 转换为指定的结构体
 	if err = mapstructure.Decode(result.Data, &list); err != nil {
-		return nil, errors.New("配置中心无配置env=" + m.Options.Env + "appName=" + m.Options.AppName + ",server=" + m.Options.RemoteAddr)
+		return nil, errors.New("配置中心无配置envId=" + m.Options.EnvId + "appName=" + m.Options.AppName + ",server=" + m.Options.RemoteAddr)
 	}
 	return list, nil
 }
@@ -122,7 +122,7 @@ func startPoll(m *Manager) {
 		}
 		req := CheckRequest{
 			AppName: m.Options.AppName,
-			EnvType: m.Options.Env,
+			EnvId:   m.Options.EnvId,
 			Old:     old,
 		}
 		result, err := m.Client.RequestTcp("/api/config/check", req, 3000)
@@ -137,7 +137,7 @@ func startPoll(m *Manager) {
 		var list []Metadata
 		//将 map 转换为指定的结构体
 		if err = mapstructure.Decode(result.Data, &list); err != nil {
-			log.Error("config center polled result error env="+m.Options.Env+"appName="+m.Options.AppName+",server="+m.Options.RemoteAddr, err.Error())
+			log.Error("config center polled result error envId="+m.Options.EnvId+"appName="+m.Options.AppName+",server="+m.Options.RemoteAddr, err.Error())
 			continue
 		}
 		log.Info("poll config success! count: ", len(list))

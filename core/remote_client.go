@@ -17,7 +17,7 @@ type LoginRequest struct {
 	SeqId   string `json:"seqId"` // sequence number chosen by client
 	Token   string `json:"token"`
 	AppName string `json:"appName"`
-	EnvType string `json:"envType"`
+	EnvId   string `json:"envId"`
 }
 
 type EventDTO struct {
@@ -30,7 +30,7 @@ type EventDTO struct {
 // Options config base options
 type Options struct {
 	// config env
-	Env string
+	EnvId string
 	// the appName of at config center
 	AppName string
 	// Configure the center addresses. Multiple addresses are separated by commas(,)
@@ -100,7 +100,7 @@ func NewConfigSocketClient(options *Options) *SocketClientImpl {
 
 				if !impl.starting {
 					log.Info("reconnect success, start re login...")
-					result, err := impl.Login(impl.Options.AppName, impl.Options.Env, 6000)
+					result, err := impl.Login(impl.Options.AppName, impl.Options.EnvId, 6000)
 					if err != nil {
 						_ = impl.Close(err)
 						return
@@ -178,7 +178,7 @@ func (s *SocketClientImpl) SendData(cmd int, data interface{}) error {
 
 var TimeoutErr = errors.New("timeout error")
 
-func (s *SocketClientImpl) Login(appName string, envType string, timeout int) (*model.Response, error) {
+func (s *SocketClientImpl) Login(appName string, envId string, timeout int) (*model.Response, error) {
 	ch := make(chan *model.Response, 1)
 
 	var err error
@@ -192,7 +192,7 @@ func (s *SocketClientImpl) Login(appName string, envType string, timeout int) (*
 		requestDTO := LoginRequest{
 			SeqId:   seq,
 			AppName: appName,
-			EnvType: envType,
+			EnvId:   envId,
 		}
 		packet := model.PacketFrame{Cmd: model.CommandLogin, Body: requestDTO}
 		err = s.Send(packet)
@@ -220,7 +220,7 @@ func (s *SocketClientImpl) Launch() error {
 	if err := s.Connect(); err != nil {
 		return err
 	}
-	res, err := s.Login(s.Options.AppName, s.Options.Env, 3000)
+	res, err := s.Login(s.Options.AppName, s.Options.EnvId, 3000)
 	if err != nil {
 		return err
 	}

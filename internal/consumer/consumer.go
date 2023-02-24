@@ -20,14 +20,14 @@ func main() {
 	conf := CustomConfig{}
 	manager := serco.NewSerco(serco.Options{
 		AppName:      "serco-consumer",
-		Env:          "dev",
+		EnvId:        "dev",
 		RemoteAddr:   "127.0.0.1:9011",
 		PollInterval: 120000,
 		InstanceId:   "",
 	})
 	manager.SetupConfig(&conf)
 
-	// AppId: "core-provider", EnvType: "dev", Hostname: "core.provider",
+	// AppId: "core-provider", EnvId: "dev", Hostname: "core.provider",
 	manager.Client.On(core.NamespaceDiscovery, func(dto *core.EventDTO) {
 		log.Infof("收到事件%+v", dto)
 	})
@@ -51,11 +51,11 @@ func main() {
 		return
 	}
 	for _, instance := range rs {
-		log.Info(fmt.Sprintf("appid:%s,env:%s,hostname:%s,addrs:%s\n",
+		log.Info(fmt.Sprintf("appId:%s,envId:%s,hostname:%s,addrs:%s\n",
 			instance.AppId,
-			instance.Env,
+			instance.EnvId,
 			instance.InstanceId,
-			strings.Join(instance.Addrs, " ")))
+			strings.Join(instance.AddressList, " ")))
 	}
 	fmt.Println("config name=" + conf.Name)
 

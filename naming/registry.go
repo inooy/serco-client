@@ -44,11 +44,11 @@ func (m *ServiceManager) Registry() error {
 		addr = buildAddr(m.Options.Protocol, m.Options.LocalIp, m.Options.LocalPort)
 	}
 	var req = RegisterCmd{
-		AppId:      m.Options.AppName,
-		Env:        m.Options.EnvType,
-		InstanceId: m.Options.InstanceId,
-		Addrs:      []string{addr},
-		Status:     1,
+		AppId:       m.Options.AppName,
+		EnvId:       m.Options.EnvId,
+		InstanceId:  m.Options.InstanceId,
+		AddressList: []string{addr},
+		Status:      1,
 	}
 	m.Registered = true
 	return m.RegistryRequest(req)
@@ -59,11 +59,11 @@ func (m *ServiceManager) Cancel() error {
 		return nil
 	}
 	var req = CancelCmd{
-		AppId:           m.Options.AppName,
-		Env:             m.Options.EnvType,
-		InstanceId:      m.Options.InstanceId,
-		LatestTimestamp: time.Now().UnixNano() / 1e6,
-		Replication:     false,
+		AppId:       m.Options.AppName,
+		EnvId:       m.Options.EnvId,
+		InstanceId:  m.Options.InstanceId,
+		LatestTime:  time.Now().UnixNano() / 1e6,
+		Replication: false,
 	}
 	return m.CancelRequest(req)
 }

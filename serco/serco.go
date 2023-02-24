@@ -11,7 +11,7 @@ import (
 // Options config base options
 type Options struct {
 	// config env
-	Env string
+	EnvId string
 	// the appName of at config center
 	AppName string
 	// Configure the center addresses. Multiple addresses are separated by commas(,)
@@ -46,7 +46,7 @@ func NewSerco(options Options) *Serco {
 
 	if options.RemoteAddr != "" {
 		instance.Client = core.NewConfigSocketClient(&core.Options{
-			Env:        options.Env,
+			EnvId:      options.EnvId,
 			AppName:    options.AppName,
 			RemoteAddr: options.RemoteAddr,
 		})
@@ -62,7 +62,7 @@ func NewSerco(options Options) *Serco {
 
 func (s *Serco) SetupConfig(bean interface{}) {
 	s.ConfigManager = config.NewManager(&config.Options{
-		Env:          s.Options.Env,
+		EnvId:        s.Options.EnvId,
 		AppName:      s.Options.AppName,
 		RemoteAddr:   s.Options.RemoteAddr,
 		PollInterval: s.Options.PollInterval,
@@ -75,7 +75,7 @@ func (s *Serco) SetupDiscovery(opt RegistryOpts) {
 		opt.Protocol = "http"
 	}
 	s.ServiceManager = naming.NewNamingService(&naming.Options{
-		EnvType:      s.Options.Env,
+		EnvId:        s.Options.EnvId,
 		AppName:      s.Options.AppName,
 		RemoteAddr:   s.Options.RemoteAddr,
 		PollInterval: s.Options.PollInterval,

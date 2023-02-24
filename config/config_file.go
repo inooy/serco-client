@@ -10,14 +10,14 @@ func (m *Manager) FromFile() {
 	//realPath, _ := filepath.Abs("./")
 	// realPath := getCurrentDir()
 	///configFilePath := realPath + "/" + env + "/"
-	configFilePath := "./config/" + m.Options.Env + "/"
+	configFilePath := "./config/" + m.Options.EnvId + "/"
 	viper.SetConfigType("yaml")
 	viper.SetConfigName("config")
 	viper.AddConfigPath(configFilePath)
 	err := viper.ReadInConfig()
 	if err != nil {
 		realPath := getCurrentDir()
-		configFilePath = realPath + "/" + m.Options.Env + "/"
+		configFilePath = realPath + "/" + m.Options.EnvId + "/"
 		viper.SetConfigType("yaml")
 		viper.SetConfigName("config")
 		viper.AddConfigPath(configFilePath)

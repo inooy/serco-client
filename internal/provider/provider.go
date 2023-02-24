@@ -11,7 +11,7 @@ func main() {
 	// 构造配置管理器
 	manager := serco.NewSerco(serco.Options{
 		AppName:      "core-provider",
-		Env:          "dev",
+		EnvId:        "dev",
 		RemoteAddr:   "127.0.0.1:9011",
 		PollInterval: 300000,
 		InstanceId:   "",

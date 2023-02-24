@@ -3,7 +3,7 @@ package config
 type Metadata struct {
 	Id         int    `json:"id"`
 	AppName    string `json:"appName"`
-	EnvType    string `json:"envType"`
+	EnvId      string `json:"envId"`
 	FileId     string `json:"fileId"`
 	Format     string `json:"format"`
 	Content    string `json:"content"`

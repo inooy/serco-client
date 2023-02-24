@@ -18,7 +18,7 @@ func main() {
 
 	Serco := serco.NewSerco(serco.Options{
 		AppName:      "core-demo",
-		Env:          "dev",
+		EnvId:        "dev",
 		RemoteAddr:   "127.0.0.1:9011",
 		PollInterval: 120000,
 		InstanceId:   "",

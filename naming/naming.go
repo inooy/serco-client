@@ -16,7 +16,7 @@ type ServiceManager struct {
 // Options config base options
 type Options struct {
 	// config env
-	EnvType string
+	EnvId string
 	// the appName of at config center
 	AppName string
 	// Configure the center addresses. Multiple addresses are separated by commas(,)

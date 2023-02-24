@@ -14,7 +14,7 @@ var once sync.Once
 // Options config base options
 type Options struct {
 	// config env
-	Env string
+	EnvId string
 	// the appName of at config center
 	AppName string
 	// Configure the center addresses. Multiple addresses are separated by commas(,)

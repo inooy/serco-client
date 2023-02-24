@@ -36,6 +36,7 @@ func buildAddr(protocol string, ip string, port int) string {
 }
 
 func (m *ServiceManager) Registry() error {
+	log.Info("start registry service")
 	addr := ""
 	if m.Options.LocalIp == "" {
 		addr = buildAddr(m.Options.Protocol, GetIpAddr(), m.Options.LocalPort)
@@ -49,6 +50,7 @@ func (m *ServiceManager) Registry() error {
 		Addrs:      []string{addr},
 		Status:     1,
 	}
+	m.Registered = true
 	return m.RegistryRequest(req)
 }
 

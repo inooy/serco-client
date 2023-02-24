@@ -2,13 +2,15 @@ package naming
 
 import (
 	"github.com/inooy/serco-client/core"
+	"github.com/inooy/serco-client/pkg/log"
 )
 
 type ServiceManager struct {
-	Options   *Options
-	Client    *core.SocketClientImpl
-	App       map[string]*Instance
-	Providers []*SubscribeProvider
+	Options    *Options
+	Registered bool
+	Client     *core.SocketClientImpl
+	App        map[string]*Instance
+	Providers  []*SubscribeProvider
 }
 
 // Options config base options
@@ -38,8 +40,18 @@ func NewNamingService(options *Options, client *core.SocketClientImpl) *ServiceM
 		return &manager
 	}
 	manager.Client.OnReconnected(func(isReconnect bool) error {
-		// 重连，需要重新注册
-		return manager.Registry()
+		var err error
+		if manager.Registered {
+			// 重连，需要重新注册
+			err = manager.Registry()
+		} else {
+			log.Info("service not registry, reconnect skip registry")
+		}
+		if err == nil && len(manager.Providers) > 0 {
+			// 重新订阅
+			err = manager.Subscribe(manager.Providers)
+		}
+		return err
 	})
 	return &manager
 }
@@ -50,6 +62,7 @@ func (m *ServiceManager) GetInstance(appName string) ([]*Instance, error) {
 }
 
 func (m *ServiceManager) Subscribe(providers []*SubscribeProvider) error {
+	log.Info("start subscribe service")
 	if m.Client == nil {
 		return nil
 	}

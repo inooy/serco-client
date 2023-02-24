@@ -164,10 +164,11 @@ func (conn *template) setupSocket(real net.Conn) {
 	for {
 		readLen, err := real.Read(buffer)
 		if err == io.EOF {
+			conn.handleError(errors.New("server has closed the connection"))
 			break
 		}
 		if err != nil {
-			fmt.Println("read error: " + err.Error())
+			log.Errorf("read error: " + err.Error())
 			conn.handleError(err)
 			return
 		}

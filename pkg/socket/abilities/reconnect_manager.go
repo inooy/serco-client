@@ -11,23 +11,26 @@ const (
 )
 
 type ReconnectManager struct {
-	timer        *time.Timer
-	socketClient model.SocketClient
-	// 是否进行断线重连等管理
-	isConnectionHolden bool
-	// 延时连接时间
-	reconnectTimeDelay int
-	// 连接失败次数,不包括断开异常
-	connectionFailedTimes int
-	totalReconnectTimes   int
-	lastTime              int
-	running               bool
+	timer                         *time.Timer
+	socketClient                  model.SocketClient
+	isConnectionHolden            bool // 是否进行断线重连等管理
+	reconnectTimeDelay            int  // 延时连接时间
+	reconnectTicket               int  // 重连等待时间刻度，毫秒
+	reconnectIncrementCount       int  // 重连递增次数
+	reconnectIncrementTicketCount int  // 重连每次递增刻度
+	connectionFailedTimes         int  // 连接失败次数,不包括断开异常
+	totalReconnectTimes           int
+	lastTime                      int
+	running                       bool
 }
 
 func NewReconnectManager(socketClient model.SocketClient) *ReconnectManager {
 	return &ReconnectManager{
-		socketClient:       socketClient,
-		isConnectionHolden: true,
+		socketClient:                  socketClient,
+		isConnectionHolden:            true,
+		reconnectTicket:               1000,
+		reconnectIncrementCount:       5,
+		reconnectIncrementTicketCount: 2,
 	}
 }
 
@@ -72,8 +75,8 @@ func (r *ReconnectManager) reconnectDelay() {
 	})
 	log.Info("Reconnect after mills ", r.reconnectTimeDelay)
 	// 5+10+20+40 = 75 4次   1 + 2*5 11 21 31 1 10 20 40 80
-	r.reconnectTimeDelay = r.reconnectTimeDelay + 5*2*1000
-	if r.reconnectTimeDelay >= DefaultDelay+5*10*1000 {
+	r.reconnectTimeDelay = r.reconnectTimeDelay + r.reconnectIncrementTicketCount*r.reconnectTicket
+	if r.reconnectTimeDelay >= DefaultDelay+r.reconnectIncrementCount*r.reconnectIncrementTicketCount*r.reconnectTicket {
 		// DEFAULT * 10 = 50  10
 		r.reconnectTimeDelay = DefaultDelay
 	}
